@@ -1,0 +1,222 @@
+# Design: Sprint 4 — RAG Cross-Correlation: Sentiment + Financial Data
+
+## Technical Approach
+
+Tool- Based RAG Agent: agregar 3 herramientas de correlación en `market_ tools.py` siguiendo el patrón `@tool` existente, registrar en `MarketQueryAgent`, y extender `MarketRAGRetriever` con `query_by_metadata()` para filtrado preciso por símbolo/fecha.
+
+## Architecture Decisions
+
+### Decision: Ubicación de las 3 nuevas herramientas
+**Choice**: Todas en `market_tools.py`, junto con las 4 existentes
+**Alternatives considered**: Módulo nuevo `correlation_tools.py` — rejected (aumenta la superficie sin necesidad)
+**Rationale**: Mantiene el patrón establecido en `market_tools.py`. Los nuevos tools siguen `@tool` decorator, retornan dict serializable, y `get_retriever_tools()` las incluye sin cambios de arquitectura.
+
+### Decision: Motor de correlación estadística
+**Choice**: Polars puro — `pl.Series.corr()` para Pearson, `spearmanr()` de `scipy.stats`
+**Alternatives considered**: SQL con DuckDB — rejected (no está en dependencies), pandas — rejected (proyecto usa Polars)
+**Rationale**: Polars ya es dependencia (`polars` en requirements). `Series.corr()` es O(1) para Pearson sobre columnas. Spearman requiere rank transform — `scipy.stats.spearmanr` sobre Series.to_numpy().
+
+### Decision: Time filter en dos capas
+**Choice**: Validación en tool (capa 1) + `query_by_metadata()` (capa 2)
+**Alternatives considered**: Solo en tool — rejected (no DRY, riesgo de inconsistencia), solo en retriever — rejected (el tool no puede filtrar sin el método)
+**Rationale**: Cada tool aplica la validación del spec (overlap check, minimum threshold) antes de llamar al retriever. El retriever filtra por fecha/símbolo con `query_by_metadata()` para precisión.
+
+## Data Flow
+
+```
+User Query: "How did sentiment correlate with AAPL price last month?"
+         │
+         ▼
+MarketQueryAgent (ReAct loop)
+         │
+         ▼
+get_sentiment_price_correlation_tool(symbol="AAPL", window_days=30)
+         │
+    ┌────┴──────────────────────────────────────────────┐
+    │ 1. query_by_metadata(collection="sentiment",     │
+    │    symbol="AAPL", start/end)                      │
+    │ 2. query_by_metadata(collection="stocks",        │
+    │    symbol="AAPL", start/end)                     │
+    │ 3. Validate overlap — if < 10 days → error      │
+    │ 4. Polars: compute pearson, spearman            │
+    └─────────────────────────────────────────────────┘
+         │
+         ▼
+Return {status, pearson_coefficient, sentiment_direction, ...}
+         │
+         ▼
+Agent presents result in natural language
+```
+
+## File Changes
+
+| File | Action | Description |
+|------|--------|------------|
+| `src/agents/chains/market_tools.py` | Modify | +3 `@tool` functions, update `__all__` |
+| `src/agents/retriever.py` | Modify | +1 method `query_by_metadata()` |
+| `src/agents/query_agent.py` | Modify | Register new tools in `get_retriever_tools()` call |
+| `src/agents/chains/prompts.py` | Modify | +3 prompt templates for cross-collection context |
+| `tests/agents/test_market_tools.py` | Create | Unit tests for 3 new tools |
+| `tests/agents/test_retriever.py` | Modify | +tests for `query_by_metadata()` |
+
+## New Tool Signatures (market_tools.py)
+
+```python
+from langchain_core.tools import tool
+from scipy.stats import spearmanr
+import polars as pl
+
+@tool
+def get_sentiment_price_correlation_tool(
+    symbol: str,
+    window_days: int = 30,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> str:
+    """
+    Compute statistical correlation between sentiment and stock price.
+    ...
+    """
+    from src.agents.retriever import MarketRAGRetriever
+
+    retriever = MarketRAGRetriever()
+
+    # Determine date range
+    end = end_date or date.today().isoformat()
+    start = start_date or (end - window_days days).isoformat()
+
+    # Layer 1: fetch from retriever
+    sentiment_data = retriever.query_by_metadata(
+        collection="sentiment", symbol=symbol, start_date=start, end_date=end
+    )
+    stock_data = retriever.query_by_metadata(
+        collection="stocks", symbol=symbol, start_date=start, end_date=end
+    )
+
+    # Layer 2: validate overlap
+    sentiment_dates = {m["date"] for r in sentiment_data for m in [r["metadata"]]}
+    stock_dates = {m["date"] for r in stock_data for m in [r["metadata"]]}
+    overlap = sentiment_dates & stock_dates
+
+    if len(overlap) < 10:
+        return json.dumps({
+            "status": "insufficient_data",
+            "overlap_count": len(overlap),
+            "available_sentiment_range": [min(sentiment_dates), max(sentiment_dates)],
+            "available_stock_range": [min(stock_dates), max(stock_dates)],
+        })
+
+    if not overlap:
+        return json.dumps({
+            "status": "no_overlap",
+            "available_sentiment_range": [...],
+            "available_stock_range": [...],
+        })
+
+    # Compute correlation via Polars
+    df_sentiment = pl.DataFrame(...)
+    df_stock = pl.DataFrame(...)
+    df_aligned = df_sentiment.join(df_stock, on="date")
+    pearson = float(df_aligned["sentiment_score"].corr(df_aligned["price_change_pct"]))
+    spearman = float(spearmanr(...)[0])
+
+    return json.dumps({
+        "status": "success",
+        "pearson_coefficient": round(pearson, 3),
+        "spearman_coefficient": round(spearman, 3),
+        "overlap_actual_days": len(overlap),
+        "daily_breakdown": [...],
+    })
+
+
+@tool
+def align_by_temporal_window_tool(
+    symbol: str,
+    start: str,
+    end: str,
+    lookback_days: int = 0,
+) -> str:
+    """
+    Align sentiment and stock data by temporal window.
+    Returns JSON with aligned DataFrame.
+    """
+    # Similar pattern: query_by_metadata + Polars join + overlap validation
+
+
+@tool
+def get_cross_collection_context_tool(
+    symbol: str,
+    start: str | None = None,
+    end: str | None = None,
+    recency_days: int = 30,
+) -> str:
+    """
+    Enrich prompt with structured context from stocks, news, sentiment.
+    Returns JSON with KPI summaries.
+    """
+    # Parallel queries to all 3 collections + Polars aggregation + to_prompt_string()
+```
+
+## New Retriever Method (retriever.py)
+
+```python
+def query_by_metadata(
+    self,
+    collection: str,
+    symbol: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    min_score: float | None = None,
+    max_score: float | None = None,
+    k: int = 1_000,
+) -> list[dict]:
+    """
+    Query ChromaDB collection by metadata filters (symbol, date range, score).
+    """
+    import chromadb
+    from datetime import datetime
+
+    if end_date and start_date and end_date < start_date:
+        raise ValueError("end_date must be after start_date")
+
+    where_filters: dict = {}
+    if symbol:
+        where_filters["symbol"] = symbol
+    if start_date:
+        where_filters["date"] = {"$gte": start_date}
+    if end_date:
+        where_filters["date"] = {"$lte": end_date}
+    if min_score or max_score:
+        range_filter = {}
+        if min_score is not None:
+            range_filter["$gte"] = min_score
+        if max_score is not None:
+            range_filter["$lte"] = max_score
+        where_filters["sentiment_score"] = range_filter
+
+    col_map = {"stocks": self.stocks_col, "news": self.news_col, "sentiment": self.sentiment_col}
+    col = col_map.get(collection)
+    if not col:
+        raise ValueError(f"Unknown collection: {collection}")
+
+    results = col.get(where=where_filters, limit=k)
+    return [
+        {"document": r.documents[0], "metadata": r.metadatas[0], "distance": r.distances[0]}
+        for r in results
+    ]
+```
+
+## Testing Strategy
+
+| Layer | What to Test | Approach |
+|-------|-------------|----------|
+| Unit | Each new tool: no_overlap, insufficient_data, partial_overlap | pytest fixtures with mock retriever returning known data |
+| Unit | `query_by_metadata()` edge cases | In-memory ChromaDB |
+| Integration | Full ReAct loop with correlation query | Mock Ollama + in-memory ChromaDB |
+
+## Migration / Rollout
+No migration required — Greenfield tools. ChromaDB collections existentes no se modifican. Feature flag: si las nuevas tools no registran, el agent retrocede a las 4 existentes.
+
+## Open Questions
+- [ ] `spearmanr` de `scipy.stats` o implementar a mano (para evitar dependencia de scipy)?
+- [ ] ¿Caching de resultados de correlación para queries repetidas? (postergar a futuro)

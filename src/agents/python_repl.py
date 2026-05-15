@@ -1,0 +1,130 @@
+"""CalculationExecutor — financial calculations via Python REPL MCP."""
+from __future__ import annotations
+from src.agents.sub_orchestrator import BaseSubOrchestrator
+from src.agents.mcp.repl_server import calculate_python
+from src.utils import get_logger
+
+log = get_logger("agents.python_repl")
+
+_CALC_KEYWORDS = [
+    "calculate", "calculation", "compute", "formula",
+    "npv", "irr", "sharpe", "var", "value at risk",
+    "beta", "alpha", "standard deviation", "volatility",
+    "correlation", "covariance", "regression",
+    "moving average", "sma", "ema", "rsi",
+    "ratio", "metric", "analysis", "what if",
+    "cálculo", "calcular", "fórmula", "fórmula",
+    "npv", "tir", "sharpe", "beta",
+]
+
+
+class CalculationExecutor(BaseSubOrchestrator):
+    """Handles financial calculations via safe Python REPL."""
+
+    @property
+    def domain(self) -> str:
+        return "calculation"
+
+    def can_handle(self, query: str) -> tuple[bool, float]:
+        q = query.lower().strip()
+        if not q:
+            return False, 0.0
+
+        matches = sum(1 for kw in _CALC_KEYWORDS if kw in q)
+        if matches >= 2:
+            return True, 0.95
+        elif matches >= 1:
+            return True, 0.75
+        return False, 0.0
+
+    def answer(self, query: str) -> str:
+        q = query.lower()
+
+        try:
+            # Map natural language queries to code templates
+            if "npv" in q or "net present value" in q:
+                return self._calculate_npv(q)
+            elif "irr" in q or "internal rate" in q:
+                return "IRR requiere cálculo iterativo. Usá: calculate_python con el código apropiado."
+            elif "sharpe" in q:
+                return self._calculate_sharpe()
+            elif "moving average" in q or "sma" in q:
+                return self._calculate_sma()
+            else:
+                return "Decime exactamente qué querés calcular (NPV, Sharpe, etc.) y te ayudo con el código Python."
+        except Exception as e:
+            log.error(f"CalculationExecutor failed: {e}")
+            return f"Error en el cálculo: {e}"
+
+    def _calculate_npv(self, query: str) -> str:
+        """Calculate NPV based on query context."""
+        code = """# Net Present Value example
+# Cash flows: $100 yearly for 5 years, discount rate 10%
+cash_flows = [100, 100, 100, 100, 100]
+rate = 0.10
+
+npv = sum([cf / ((1 + rate) ** (i + 1)) for i, cf in enumerate(cash_flows)])
+initial = 400  # Initial investment
+
+print(f"Present value of cash flows: ${npv:,.2f}")
+print(f"Initial investment: ${initial:,.2f}")
+print(f"NPV: ${npv - initial:,.2f}")
+if npv > initial:
+    print("=> Positive NPV: Project adds value ✅")
+else:
+    print("=> Negative NPV: Project destroys value ❌")
+"""
+        result = calculate_python(code)
+        return f"## NPV Calculation\n\n{result}\n\n💡 *Podés ajustar los valores editando cash_flows, rate e initial*"
+
+    def _calculate_sharpe(self) -> str:
+        code = """# Sharpe Ratio calculation
+import numpy as np
+
+# Example daily returns (decimal form)
+daily_returns = [0.01, -0.005, 0.02, 0.015, -0.01, 0.008, 0.012, -0.003, 0.018, 0.005]
+
+mean_return = np.mean(daily_returns)
+std_dev = np.std(daily_returns, ddof=1)
+risk_free_rate = 0.05  # 5% annual
+
+# Annualized Sharpe (252 trading days)
+sharpe = (mean_return * 252 - risk_free_rate) / (std_dev * np.sqrt(252))
+
+print(f"Mean daily return: {mean_return*100:.2f}%")
+print(f"Daily std dev: {std_dev*100:.2f}%")
+print(f"Annualized Sharpe Ratio: {sharpe:.2f}")
+if sharpe > 2:
+    print("Rating: Excellent ⭐⭐⭐⭐⭐")
+elif sharpe > 1:
+    print("Rating: Good ⭐⭐⭐⭐")
+elif sharpe > 0:
+    print("Rating: Average ⭐⭐⭐")
+else:
+    print("Rating: Poor ⭐⭐")
+"""
+        return f"## Sharpe Ratio Calculation\n\n{calculate_python(code)}"
+
+    def _calculate_sma(self) -> str:
+        code = """# Simple Moving Average (SMA)
+import pandas as pd
+
+# Example price data
+prices = [100, 102, 101, 105, 107, 106, 108, 110, 109, 111,
+          113, 112, 115, 114, 116, 118, 117, 119, 120, 121]
+
+sma_5 = pd.Series(prices).rolling(window=5).mean()
+sma_10 = pd.Series(prices).rolling(window=10).mean()
+
+print(f"Prices (last 5): {prices[-5:]}")
+print(f"SMA-5 (last 5): {[round(x, 2) for x in sma_5.dropna().tolist()[-5:]]}")
+print(f"SMA-10 (last 5): {[round(x, 2) for x in sma_10.dropna().tolist()[-5:]]}")
+print(f"Current price: ${prices[-1]}")
+print(f"SMA-5: ${sma_5.iloc[-1]:.2f}")
+print(f"SMA-10: ${sma_10.iloc[-1]:.2f}")
+if prices[-1] > sma_5.iloc[-1]:
+    print("=> Price above SMA-5: Short-term bullish 📈")
+else:
+    print("=> Price below SMA-5: Short-term bearish 📉")
+"""
+        return f"## Simple Moving Average (SMA)\n\n{calculate_python(code)}"

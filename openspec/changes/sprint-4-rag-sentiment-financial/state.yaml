@@ -1,0 +1,18 @@
+# SDD Change State
+# Managed by orchestrator — DO NOT edit manually
+
+change: sprint-4-rag-sentiment-financial
+phase: proposal
+mode: interactive
+artifact_store: openspec
+
+created_at: "2026-05-01T17:45:00"
+created_by: orchestrator
+
+artifacts:
+  proposal: openspec/changes/sprint-4-rag-sentiment-financial/proposal.md
+
+next_phase: spec
+
+flags:
+  strict_tdd: false

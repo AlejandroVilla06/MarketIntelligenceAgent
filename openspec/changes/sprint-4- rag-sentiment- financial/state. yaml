@@ -1,0 +1,18 @@
+# SDD Change State
+# Managed by orchestrator — DO NOT edit manually
+change: sprint-4-rag-sentiment-financial
+phase: spec
+mode: interactive
+artifact_store: openspec
+created_at: "2026-05-01T17:45:00"
+created_by: orchestrator
+artifacts:
+  proposal: openspec/changes/sprint-4-rag-sentiment-financial/proposal.md
+  spec_sentiment_price_correlation: openspec/changes/sprint-4-rag-sentiment-financial/specs/sentiment-price-correlation/spec.md
+  spec_temporal_alignment: openspec/changes/sprint-4-rag-sentiment-financial/specs/temporal-alignment/spec.md
+  spec_cross_collection_context: openspec/changes/sprint-4-rag-sentiment-financial/specs/cross-collection-context/spec.md
+  spec_market_query_agent: openspec/changes/sprint-4-rag-sentiment-financial/specs/market-query-agent/spec.md
+  spec_market_rag_retriever: openspec/changes/sprint-4-rag-sentiment-financial/specs/market-rag-retriever/spec.md
+next_phase: design
+flags:
+  strict_tdd: false
