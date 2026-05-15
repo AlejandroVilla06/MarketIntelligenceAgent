@@ -148,10 +148,18 @@ mock_messages_table.select.return_value.eq.return_value.order.return_value.execu
     ],
 )
 
-# chain: select("id", count="exact").eq("conversation_id", cid).execute  (list count)
+# chain: select("id", count="exact").eq("conversation_id", cid).execute  (list count - O(N) path)
 mock_messages_table.select.return_value.eq.return_value.execute.return_value = MagicMock(
     data=[],
     count=2,
+)
+
+# chain: select("conversation_id", count="exact").in_("conversation_id", ids).execute  (list count - O(1) path)
+mock_messages_table.select.return_value.in_.return_value.execute.return_value = MagicMock(
+    data=[
+        {"conversation_id": "conv-0001", "id": "msg-1"},
+        {"conversation_id": "conv-0001", "id": "msg-2"},
+    ],
 )
 
 # ---------------------------------------------------------------------------

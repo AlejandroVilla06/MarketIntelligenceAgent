@@ -2,7 +2,7 @@
 from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends
-from src.agents.orchestrator import MarketOrchestrator
+from src.market_orchestrator.orchestrator import MarketOrchestrator
 from src.api.auth.jwt_validator import get_current_user
 from src.api.deps import get_orchestrator
 from src.api.schemas.status import StatusResponse

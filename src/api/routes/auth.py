@@ -35,7 +35,7 @@ async def signup(request: SignupRequest, supabase: Client = Depends(get_supabase
         if "already registered" in error_msg.lower():
             raise HTTPException(status_code=400, detail="Email already registered")
         log.error(f"Signup failed: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Registration failed. Check your input.")
 
 
 @router.post("/auth/login", response_model=LoginResponse)
@@ -77,7 +77,7 @@ async def oauth_url(provider: str, supabase: Client = Depends(get_supabase_clien
         return OAuthResponse(url=result.url, provider=provider.lower())
     except Exception as e:
         log.error(f"OAuth URL failed: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Failed to get authentication URL.")
 
 
 @router.get("/auth/callback")
@@ -100,7 +100,7 @@ async def oauth_callback(
         }
     except Exception as e:
         log.error(f"OAuth callback failed: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Authentication failed. Try again.")
 
 
 @router.post("/auth/logout")
@@ -114,7 +114,7 @@ async def logout(
         return {"message": "Logged out successfully"}
     except Exception as e:
         log.error(f"Logout failed: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Failed to logout. Try again.")
 
 
 @router.get("/auth/me", response_model=UserProfile)
@@ -171,4 +171,4 @@ async def refresh_token(
         )
     except Exception as e:
         log.error(f"Token refresh failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        raise HTTPException(status_code=401, detail="Session expired. Login again.")

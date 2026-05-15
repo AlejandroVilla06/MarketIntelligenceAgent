@@ -1,5 +1,5 @@
 """
-Tests for src.agents.orchestrator module (MarketOrchestrator).
+Tests for src.market_orchestrator.orchestrator module (MarketOrchestrator).
 
 Integration tests for orchestrator end-to-end flows.
 Tests setup, ask, reset, and the full data pipeline.
@@ -68,12 +68,12 @@ class TestMarketOrchestrator:
 
     def test_orchestrator_can_be_imported(self):
         """Test that the orchestrator module can be imported."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         assert MarketOrchestrator is not None
 
     def test_init_sets_defaults(self):
         """Test initialization sets default values."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
         orchestrator = MarketOrchestrator()
         
@@ -85,7 +85,7 @@ class TestMarketOrchestrator:
 
     def test_init_with_custom_params(self):
         """Test initialization with custom parameters."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
         orchestrator = MarketOrchestrator(
             persist_directory="/custom/path",
@@ -97,11 +97,11 @@ class TestMarketOrchestrator:
 
     def test_setup_initializes_components(self, tmp_path: Path):
         """Test that setup initializes retriever and agent."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.StorageInterface") as mock_storage:
-            with patch("src.agents.orchestrator.MarketRAGRetriever") as mock_retriever:
-                with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.StorageInterface") as mock_storage:
+            with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever") as mock_retriever:
+                with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                     # Set up mocks
                     mock_storage_instance = MagicMock()
                     mock_storage_instance.load_stocks.return_value = MagicMock()
@@ -133,11 +133,11 @@ class TestMarketOrchestrator:
 
     def test_ask_delegates_to_agent(self, tmp_path: Path):
         """Test that ask delegates to agent.run()."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.StorageInterface"):
-            with patch("src.agents.orchestrator.MarketRAGRetriever") as mock_retriever:
-                with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.StorageInterface"):
+            with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever") as mock_retriever:
+                with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                     mock_retriever_instance = MagicMock()
                     mock_retriever_instance._stocks_collection.count.return_value = 0
                     mock_retriever_instance._news_collection.count.return_value = 0
@@ -159,11 +159,11 @@ class TestMarketOrchestrator:
 
     def test_ask_returns_agent_result(self, tmp_path: Path):
         """Test that ask returns agent result."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.StorageInterface"):
-            with patch("src.agents.orchestrator.MarketRAGRetriever"):
-                with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.StorageInterface"):
+            with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever"):
+                with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                     mock_agent_instance = MagicMock()
                     mock_agent_instance.run.return_value = "Complete answer."
                     mock_agent.return_value = mock_agent_instance
@@ -177,10 +177,10 @@ class TestMarketOrchestrator:
 
     def test_reset_clears_retriever_and_agent(self, tmp_path: Path):
         """Test that reset clears retriever and agent."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.MarketRAGRetriever") as mock_retriever:
-            with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever") as mock_retriever:
+            with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                 mock_retriever_instance = MagicMock()
                 mock_retriever.return_value = mock_retriever_instance
                 
@@ -200,7 +200,7 @@ class TestMarketOrchestrator:
 
     def test_get_status_returns_setup_state(self, tmp_path: Path):
         """Test that get_status returns setup state."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
         orchestrator = MarketOrchestrator()
         orchestrator._is_setup = True
@@ -211,9 +211,9 @@ class TestMarketOrchestrator:
 
     def test_get_status_returns_counts(self, tmp_path: Path):
         """Test that get_status returns collection counts."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.MarketRAGRetriever") as mock_retriever:
+        with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever") as mock_retriever:
             mock_retriever_instance = MagicMock()
             mock_retriever_instance._stocks_collection.count.return_value = 100
             mock_retriever_instance._news_collection.count.return_value = 50
@@ -237,11 +237,11 @@ class TestIntegrationFlows:
 
     def test_full_flow_setup_and_ask(self, tmp_path: Path):
         """Test full end-to-end flow with setup and ask."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.StorageInterface") as mock_storage:
-            with patch("src.agents.orchestrator.MarketRAGRetriever") as mock_retriever:
-                with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.StorageInterface") as mock_storage:
+            with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever") as mock_retriever:
+                with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                     # Set up mocks
                     mock_storage_instance = MagicMock()
                     mock_storage_instance.load_stocks.return_value = MagicMock()
@@ -280,11 +280,11 @@ class TestIntegrationFlows:
 
     def test_full_flow_ask_before_setup(self, tmp_path: Path):
         """Test that ask auto-sets up if needed."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.StorageInterface") as mock_storage:
-            with patch("src.agents.orchestrator.MarketRAGRetriever"):
-                with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.StorageInterface") as mock_storage:
+            with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever"):
+                with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                     # Set up mock
                     mock_storage_instance = MagicMock()
                     mock_storage_instance.load_stocks.return_value = MagicMock()
@@ -311,11 +311,11 @@ class TestIntegrationFlows:
 
     def test_ask_handles_error_gracefully(self, tmp_path: Path):
         """Test that ask handles agent errors gracefully."""
-        from src.agents.orchestrator import MarketOrchestrator
+        from src.market_orchestrator.orchestrator import MarketOrchestrator
         
-        with patch("src.agents.orchestrator.StorageInterface"):
-            with patch("src.agents.orchestrator.MarketRAGRetriever"):
-                with patch("src.agents.orchestrator.MarketQueryAgent") as mock_agent:
+        with patch("src.market_orchestrator.orchestrator.StorageInterface"):
+            with patch("src.market_orchestrator.orchestrator.MarketRAGRetriever"):
+                with patch("src.market_orchestrator.orchestrator.MarketQueryAgent") as mock_agent:
                     mock_agent_instance = MagicMock()
                     mock_agent_instance.run.side_effect = Exception("Test error")
                     mock_agent.return_value = mock_agent_instance

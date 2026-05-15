@@ -6,7 +6,7 @@ Routes queries to domain-specific sub-orchestrators via RouterAgent.
 Supports: stocks, crypto, macroeconomics, financial calculations.
 
 Usage:
-    from src.agents.orchestrator import MarketOrchestrator
+    from src.market_orchestrator.orchestrator import MarketOrchestrator
     orchestrator = MarketOrchestrator()
     orchestrator.setup()
     answer = orchestrator.ask("How is Bitcoin doing?")

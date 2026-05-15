@@ -11,6 +11,7 @@ Previous implementation (in-memory) is preserved in git history at
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 from typing import Any
 
 from src.utils import get_logger
@@ -82,27 +83,38 @@ class SupabaseConversationStore:
         return len(result.data) > 0
 
     async def list(self, offset: int = 0, limit: int = 20) -> list[dict]:
-        """List conversations for the authenticated user with pagination."""
-        query = (
+        """List conversations for the authenticated user with message counts — single pass."""
+        result = await asyncio.to_thread(
             self._supabase.table("conversations")
                 .select("id, title, created_at, updated_at")
                 .eq("user_id", self._user_id)
                 .order("updated_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute
         )
 
-        # Apply range for pagination
-        ranged = query.range(offset, offset + limit - 1)
-        result = await asyncio.to_thread(ranged.execute)
-
         convs = result.data or []
+        if not convs:
+            return convs
+
+        # Get ALL message counts in ONE additional query, not N queries
+        conv_ids = [c["id"] for c in convs]
+        msg_result = await asyncio.to_thread(
+            self._supabase.table("messages")
+                .select("conversation_id", count="exact")
+                .in_("conversation_id", conv_ids)
+                .execute
+        )
+
+        # PostgREST `count` returns total rows before filter, not grouped counts.
+        # So we count locally from the returned data.
+        counts: Counter[str] = Counter()
+        for msg in msg_result.data or []:
+            counts[msg["conversation_id"]] += 1
+
         for conv in convs:
-            count = await asyncio.to_thread(
-                self._supabase.table("messages")
-                    .select("id", count="exact")
-                    .eq("conversation_id", conv["id"])
-                    .execute
-            )
-            conv["message_count"] = count.count if hasattr(count, 'count') else len(count.data or [])
+            conv["message_count"] = counts.get(conv["id"], 0)
+
         return convs
 
     async def add_message(self, cid: str, role: str, content: str) -> bool:

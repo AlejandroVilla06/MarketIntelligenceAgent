@@ -124,7 +124,7 @@ def _add_message(role: str, content: str) -> None:
 def _get_orchestrator() -> Any:
     if st.session_state.orchestrator is None:
         try:
-            from src.agents.orchestrator import MarketOrchestrator
+            from src.market_orchestrator.orchestrator import MarketOrchestrator
             o = MarketOrchestrator()
             o.setup()
             st.session_state.orchestrator = o

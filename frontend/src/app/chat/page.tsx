@@ -67,8 +67,8 @@ export default function ChatPage() {
         setConversations([...current, ...convs])
       }
       setHasMore(convs.length >= PAGE_SIZE)
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.error("Failed to load conversations:", err)
     } finally {
       setIsLoadingHistory(false)
     }
@@ -85,8 +85,8 @@ export default function ChatPage() {
       const conv = await api.conversations.create()
       setCurrentConversation({ id: conv.id, title: "Nueva conversación", messages: [] })
       await loadConversations()
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.error("Failed to create conversation:", err)
     }
   }, [setCurrentConversation, loadConversations])
 
@@ -94,8 +94,8 @@ export default function ChatPage() {
     try {
       const conv = await api.conversations.get(id)
       setCurrentConversation(conv)
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.error("Failed to select conversation:", err)
     }
   }, [setCurrentConversation, loadConversations])
 
@@ -106,8 +106,8 @@ export default function ChatPage() {
         setCurrentConversation(null)
       }
       await loadConversations()
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.error("Failed to delete conversation:", err)
     }
   }, [currentConversation?.id, setCurrentConversation, loadConversations])
 

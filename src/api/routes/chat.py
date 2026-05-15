@@ -5,7 +5,7 @@ import json
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sse_starlette.sse import EventSourceResponse
-from src.agents.orchestrator import MarketOrchestrator
+from src.market_orchestrator.orchestrator import MarketOrchestrator
 from src.api.auth.jwt_validator import get_current_user
 from src.api.deps import get_orchestrator, get_conversations
 from src.api.schemas.chat import ChatRequest, ChatResponse
@@ -42,7 +42,7 @@ async def chat(
         response = await asyncio.to_thread(orch.ask, request.query, history)
     except Exception as e:
         log.error(f"Orchestrator ask failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to process message. Try again.")
 
     # Add assistant message
     await store.add_message(conv["id"], "assistant", response)
@@ -83,7 +83,7 @@ async def chat_stream(
 
         except Exception as e:
             log.error(f"Stream failed: {e}")
-            yield {"data": json.dumps({"error": str(e)})}
+            yield {"data": json.dumps({"error": "Stream error. Try again."})}
             yield {"data": json.dumps({"done": True})}
 
     return EventSourceResponse(event_generator())
@@ -101,4 +101,4 @@ async def reset_orchestrator(
         return {"message": "Orchestrator reset successfully"}
     except Exception as e:
         log.error(f"Reset failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to reset orchestrator.")
