@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useAuthStore } from "@/stores/authStore"
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ThemeToggle } from "./ThemeToggle"
-import { Menu } from "lucide-react"
+import { Menu, Settings } from "lucide-react"
 
 interface HeaderProps {
   onToggleHistory?: () => void
@@ -39,6 +40,11 @@ export function Header({ onToggleHistory }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
         )}
+        <Link href="/settings">
+          <Button variant="ghost" size="icon">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </Link>
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger
