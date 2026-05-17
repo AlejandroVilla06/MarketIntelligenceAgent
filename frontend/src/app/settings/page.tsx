@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { api } from "@/lib/api"
+import { useAuthStore } from "@/stores/authStore"
+import type { UserProfile } from "@/stores/authStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +22,8 @@ import { Save, LogOut, User, Palette, AlertTriangle } from "lucide-react"
 export default function SettingsPage() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const [profile, setProfile] = useState<any>(null)
+  const { profile: storedProfile, setProfile: setStoredProfile } = useAuthStore()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [fullName, setFullName] = useState("")
@@ -33,8 +36,15 @@ export default function SettingsPage() {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { router.push("/login"); return }
-        
-        const me = await api.profile.get()
+
+        // Use stored profile if available, otherwise fetch fresh
+        let me: UserProfile
+        if (storedProfile) {
+          me = storedProfile
+        } else {
+          me = await api.profile.get()
+          setStoredProfile(me)
+        }
         setProfile(me)
         setFullName(me.full_name || "")
         setLanguage(me.preferred_language || "es")
@@ -42,12 +52,13 @@ export default function SettingsPage() {
       finally { setLoading(false) }
     }
     load()
-  }, [router])
+  }, [router, storedProfile, setStoredProfile])
 
   async function handleSave() {
     setSaving(true)
     try {
       await api.profile.update({ full_name: fullName, preferred_language: language })
+      setStoredProfile({ ...storedProfile, full_name: fullName, preferred_language: language })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch { /* ignore */ }
@@ -57,6 +68,7 @@ export default function SettingsPage() {
   function handleThemeChange() {
     const newTheme = theme === "dark" ? "light" : "dark"
     setTheme(newTheme)
+    setStoredProfile({ ...storedProfile, preferred_theme: newTheme })
     api.profile.update({ preferred_theme: newTheme }).catch(() => {})
   }
 

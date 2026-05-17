@@ -51,3 +51,5 @@ Lib/
 
 # Streamlit unused
 .streamlit/
+# Local Pi runtime state
+.atl/

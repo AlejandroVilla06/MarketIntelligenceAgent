@@ -23,6 +23,15 @@ import jwt as pyjwt
 
 from src.config import settings
 
+# Mock yfinance before any import chain triggers it (stock_pipeline imports it)
+import sys
+from unittest.mock import MagicMock
+
+sys.modules["yfinance"] = MagicMock()
+
+# Pre-load deps module so patch("src.api.deps.get_orchestrator") can resolve it
+import src.api.deps  # noqa: E402,F401
+
 # =============================================================================
 # Orchestrator mock — avoids importing sentence_transformers / heavy setup()
 # =============================================================================
