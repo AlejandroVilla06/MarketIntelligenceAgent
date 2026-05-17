@@ -411,6 +411,12 @@ class Settings(BaseSettings):
             return [s.strip() for s in v.split(",") if s.strip()]
         return v if isinstance(v, list) else []
 
+    @field_validator("tracked_symbols", mode="after")
+    @classmethod
+    def uppercase_symbols(cls, v: list[str]) -> list[str]:
+        """Normalize stock symbols to uppercase."""
+        return [s.upper() for s in v]
+
     @field_validator("chromadb_persist_dir", "yfinance_cache_dir", "model_save_dir", "log_file", "data_processed_dir", mode="before")
     @classmethod
     def resolve_path(cls, v: str | Path) -> Path:

@@ -51,5 +51,7 @@ Lib/
 
 # Streamlit unused
 .streamlit/
-# Local Pi runtime state
-.atl/
+# Pi AI tool runtime state
+.pi/
+# .atl skill registry cache (skill-registry.md IS tracked)
+.atl/.skill-registry.cache.json
