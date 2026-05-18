@@ -141,10 +141,14 @@ export default function ChatPage() {
 				query,
 				currentConversation?.id,
 				(token) => appendStreamToken(token),
-				() => {
+				(convId) => {
 					const fullContent = useChatStore.getState().streamingContent;
 					addMessage({ role: "assistant", content: fullContent });
 					resetStreaming();
+					// Update current conversation ID if this was a new conversation
+					if (convId && !currentConversation?.id) {
+						setCurrentConversation({ id: convId, title: "Nueva conversación", messages: [] });
+					}
 					loadConversations();
 				},
 				(error) => {

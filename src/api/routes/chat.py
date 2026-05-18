@@ -96,12 +96,12 @@ async def chat_stream(
                 await store.add_message(conv["id"], "assistant", full_response)
             except Exception as e:
                 log.error("[chat_stream] Failed to save response (non-fatal): {}", e)
-            yield {"data": json.dumps({"done": True})}
+            yield {"data": json.dumps({"done": True, "conversation_id": conv["id"]})}
 
         except Exception as e:
             log.error("[chat_stream] Stream failed: {}", e, exc_info=True)
             yield {"data": json.dumps({"error": f"Stream error: {e}"})}
-            yield {"data": json.dumps({"done": True})}
+            yield {"data": json.dumps({"done": True, "conversation_id": conv["id"]})}
 
     return EventSourceResponse(event_generator())
 

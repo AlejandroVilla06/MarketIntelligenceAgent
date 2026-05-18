@@ -119,7 +119,7 @@ export async function streamChat(
 	query: string,
 	conversationId: string | undefined,
 	onToken: (token: string) => void,
-	onDone: () => void,
+	onDone: (conversationId?: string) => void,
 	onError: (error: string) => void,
 ): Promise<void> {
 	const token = await getAccessToken();
@@ -172,7 +172,7 @@ export async function streamChat(
 					try {
 						const data = JSON.parse(line.slice(6));
 						if (data.token) onToken(data.token);
-						if (data.done) onDone();
+						if (data.done) onDone(data.conversation_id);
 						if (data.error) onError(data.error);
 					} catch {
 						/* ignore parse errors */
