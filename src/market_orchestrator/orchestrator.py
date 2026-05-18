@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from src.market_orchestrator.sub_orchestrator import BaseSubOrchestrator
 from src.market_orchestrator.router_agent import RouterAgent
 from src.market_orchestrator.stocks_sub import StocksSubOrchestrator
 from src.market_orchestrator.crypto_sub import CryptoSubOrchestrator
@@ -27,7 +26,7 @@ from src.data_engine.storage import StorageInterface
 from src.utils import get_logger
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    pass
 
 log = get_logger("agents.orchestrator")
 
@@ -75,6 +74,14 @@ class MarketOrchestrator:
         """
         log.info("Setting up hierarchical MarketOrchestrator...")
 
+        # ── Pre-calentamiento de imports pesados ──────────────────────
+        # Forzar langchain_openai (~8s) en startup, no en primer request
+        try:
+            from src.market_orchestrator.llm_provider import warmup_llm
+            warmup_llm()
+        except Exception:
+            pass
+
         self._storage = storage or StorageInterface()
         self.storage = self._storage
         self._retriever = MarketRAGRetriever(
@@ -89,8 +96,9 @@ class MarketOrchestrator:
         self.router.register(MacroSubOrchestrator())
         self.router.register(CalculationExecutor())
 
-        # MCP Health Check — verify external API connectivity
-        self._check_mcp_connectivity()
+        # MCP Health Check — no bloqueante (dispara en background)
+        import threading
+        threading.Thread(target=self._check_mcp_connectivity, daemon=True).start()
 
         self._is_setup = True
         log.info("✅ Hierarchical MarketOrchestrator setup complete")
@@ -108,7 +116,7 @@ class MarketOrchestrator:
                 from src.agents.mcp.crypto_server import get_crypto_price
                 result = get_crypto_price("BTC")
                 if "error" not in result.lower() and "⚠️" not in result:
-                    log.info(f"✅ MCP READY — CoinMarketCap conectado y respondiendo")
+                    log.info("✅ MCP READY — CoinMarketCap conectado y respondiendo")
                     log.info(f"   BTC: {result.split(chr(10))[1] if chr(10) in result else 'OK'}")
                 else:
                     log.warning(f"⚠️ MCP CoinMarketCap conectado pero devolvió: {result[:80]}")
@@ -122,7 +130,7 @@ class MarketOrchestrator:
                 from src.agents.mcp.macro_server import get_gdp
                 result = get_gdp()
                 if "error" not in result.lower() and "Error" not in result:
-                    log.info(f"✅ MCP READY — FRED conectado y respondiendo")
+                    log.info("✅ MCP READY — FRED conectado y respondiendo")
                     log.info(f"   GDP: {result.split(chr(10))[1] if chr(10) in result else 'OK'}")
                 else:
                     log.warning(f"⚠️ MCP FRED conectado pero devolvió: {result[:80]}")

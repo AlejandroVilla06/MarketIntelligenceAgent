@@ -72,6 +72,24 @@ class RouterAgent:
 
         return None
 
+    def _is_calc_query(self, query_lower: str) -> bool:
+        """Determine if query genuinely requests financial calculation.
+
+        More conservative than CalculationExecutor.can_handle to prevent
+        code-related output from leaking into investment advice responses
+        during fallback mode.
+        """
+        calc_terms = [
+            # English
+            "calculate", "calculation", "compute", "formula",
+            "npv", "net present value", "irr", "internal rate",
+            "sharpe", "sma", "ema", "moving average",
+            # Spanish — word-bounded to avoid false positives
+            "cálculo", "calcular", "fórmula",
+            " tir ", " tir.", " van ",
+        ]
+        return any(kw in query_lower for kw in calc_terms)
+
     def route(self, query: str) -> RoutingDecision:
         """Classify query and return routing decision.
 
@@ -153,9 +171,23 @@ class RouterAgent:
         return self._fallback_answer(query)
     
     def _fallback_answer(self, query: str) -> str:
-        """Query ALL sub-orchestrators and synthesize results."""
+        """Query ALL sub-orchestrators and synthesize results.
+
+        SECURITY: Skips CalculationExecutor for non-math queries to prevent
+        code-related output ("te ayudo con el código Python", raw Python code)
+        from leaking into investment advice responses when LLM synthesis fails.
+        """
         results = []
+        is_calc = self._is_calc_query(query.lower())
+
         for sub in self.sub_orchestrators:
+            # SECURITY: Never query CalculationExecutor for non-calculation queries
+            # in fallback mode. Its output contains code references/offers that
+            # are inappropriate for investment advice responses.
+            if sub.domain == "calculation" and not is_calc:
+                log.info(f"   Skipping {sub.domain} (non-calc query in fallback)")
+                continue
+
             try:
                 log.info(f"   Querying {sub.domain}...")
                 result = sub.answer(query)
@@ -178,15 +210,8 @@ class RouterAgent:
     def _synthesize_with_llm(self, query: str, context: str) -> str:
         """Use LLM to synthesize results from multiple domains."""
         try:
-            from langchain_openai import ChatOpenAI
-            from src.config import settings
-
-            llm = ChatOpenAI(
-                model=settings.rag_llm_model,
-                temperature=0.3,
-                api_key=settings.openai_api_key,
-                base_url=settings.openai_api_base,
-            )
+            from src.market_orchestrator.llm_provider import get_llm
+            llm = get_llm()
 
             prompt = f"""Sos un ASESOR FINANCIERO, no un programador. El usuario preguntó:
 

@@ -24,19 +24,10 @@ class MacroSubOrchestrator(BaseSubOrchestrator):
         self._llm = None
 
     def _get_llm(self):
+        """Lazy-init LLM — uses shared singleton from llm_provider."""
         if self._llm is None:
-            try:
-                from langchain_openai import ChatOpenAI
-                from src.config import settings
-                self._llm = ChatOpenAI(
-                    model=settings.rag_llm_model,
-                    temperature=0.3,
-                    api_key=settings.openai_api_key,
-                    base_url=settings.openai_api_base,
-                )
-            except Exception as e:
-                log.warning(f"Could not init LLM for macro: {e}")
-                self._llm = False
+            from src.market_orchestrator.llm_provider import get_llm
+            self._llm = get_llm() or False
         return self._llm if self._llm is not False else None
 
     def _analyze_with_llm(self, query: str, data: str) -> str:

@@ -69,7 +69,7 @@ class CalculationExecutor(BaseSubOrchestrator):
             elif "moving average" in q or "sma" in q:
                 result = self._calculate_sma()
             else:
-                result = "Decime exactamente qué querés calcular (NPV, Sharpe, etc.) y te ayudo con el código Python."
+                result = "No se detectó una consulta de cálculo financiero específica. Usá términos como NPV, Sharpe Ratio o Moving Average."
             
             # Build calc widget marker from query and result
             widget_marker = self._build_calc_marker(query, result)
