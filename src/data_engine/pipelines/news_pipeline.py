@@ -13,7 +13,6 @@ Usage:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from polars import DataFrame, concat
@@ -52,6 +51,8 @@ class TextBlobSentimentAnalyzer:
     Uses TextBlob's polarity score (-1 to 1).
     """
 
+    _textblob = None
+
     def analyze(self, text: str) -> float:
         """
         Analyze sentiment of text.
@@ -63,10 +64,11 @@ class TextBlobSentimentAnalyzer:
             Polarity score (-1 negative to 1 positive)
         """
         try:
-            if TextBlob is None:
+            if self._textblob is None:
                 from textblob import TextBlob
+                self.__class__._textblob = TextBlob
 
-            blob = TextBlob(text)
+            blob = self._textblob(text)
             return blob.sentiment.polarity
         except ImportError:
             log.warning("TextBlob not installed, using 0.0 sentiment")
@@ -83,6 +85,8 @@ class VADERSentimentAnalyzer:
     Optimized for social media and news text.
     """
 
+    _vader = None
+
     def analyze(self, text: str) -> float:
         """
         Analyze sentiment of text.
@@ -94,10 +98,11 @@ class VADERSentimentAnalyzer:
             Compound score (-1 to 1)
         """
         try:
-            if SentimentIntensityAnalyzer is None:
+            if self._vader is None:
                 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+                self.__class__._vader = SentimentIntensityAnalyzer
 
-            analyzer = SentimentIntensityAnalyzer()
+            analyzer = self._vader()
             scores = analyzer.polarity_scores(text)
             return scores["compound"]
         except ImportError:

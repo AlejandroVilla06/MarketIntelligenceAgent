@@ -2,8 +2,7 @@
 from __future__ import annotations
 import asyncio
 import json
-import uuid
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
 from src.market_orchestrator.orchestrator import MarketOrchestrator
 from src.api.auth.jwt_validator import get_current_user
@@ -25,14 +24,20 @@ async def chat(
 ):
     """Single Q&A: send query, get response."""
     # Get or create conversation
-    conv = await store.get(request.conversation_id) if request.conversation_id else None
-    if request.conversation_id and not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    if not conv:
-        conv = await store.create()
+    try:
+        conv = await store.get(request.conversation_id) if request.conversation_id else None
+        if request.conversation_id and not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        if not conv:
+            conv = await store.create()
 
-    # Add user message
-    await store.add_message(conv["id"], "user", request.query)
+        # Add user message
+        await store.add_message(conv["id"], "user", request.query)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Conversation store operation failed: {}", e)
+        raise HTTPException(status_code=500, detail="Database error. Check Supabase setup.")
 
     # Build history from previous messages (exclude current user message)
     history = [{"role": m["role"], "content": m["content"]} for m in conv["messages"][:-1]]
@@ -41,11 +46,15 @@ async def chat(
     try:
         response = await asyncio.to_thread(orch.ask, request.query, history)
     except Exception as e:
-        log.error(f"Orchestrator ask failed: {e}")
+        log.error("Orchestrator ask failed: {}", e)
         raise HTTPException(status_code=500, detail="Failed to process message. Try again.")
 
     # Add assistant message
-    await store.add_message(conv["id"], "assistant", response)
+    try:
+        await store.add_message(conv["id"], "assistant", response)
+    except Exception as e:
+        log.error("Failed to save assistant response: {}", e)
+        # Still return the response even if saving fails
 
     return ChatResponse(response=response, conversation_id=conv["id"])
 
@@ -60,13 +69,18 @@ async def chat_stream(
 ):
     """SSE streaming chat endpoint with REAL LLM streaming."""
     # Get or create conversation
-    conv = await store.get(conversation_id) if conversation_id else None
-    if conversation_id and not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    if not conv:
-        conv = await store.create()
-
-    await store.add_message(conv["id"], "user", query)
+    try:
+        conv = await store.get(conversation_id) if conversation_id else None
+        if conversation_id and not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        if not conv:
+            conv = await store.create()
+        await store.add_message(conv["id"], "user", query)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("[chat_stream] Store operation failed before streaming: {}", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to initialize chat: {e}")
 
     # Build history from previous messages
     history = [{"role": m["role"], "content": m["content"]} for m in conv["messages"][:-1]]
@@ -78,12 +92,15 @@ async def chat_stream(
                 full_response += token
                 yield {"data": json.dumps({"token": token})}
 
-            await store.add_message(conv["id"], "assistant", full_response)
+            try:
+                await store.add_message(conv["id"], "assistant", full_response)
+            except Exception as e:
+                log.error("[chat_stream] Failed to save response (non-fatal): {}", e)
             yield {"data": json.dumps({"done": True})}
 
         except Exception as e:
-            log.error(f"Stream failed: {e}")
-            yield {"data": json.dumps({"error": "Stream error. Try again."})}
+            log.error("[chat_stream] Stream failed: {}", e, exc_info=True)
+            yield {"data": json.dumps({"error": f"Stream error: {e}"})}
             yield {"data": json.dumps({"done": True})}
 
     return EventSourceResponse(event_generator())
@@ -100,5 +117,5 @@ async def reset_orchestrator(
         await asyncio.to_thread(orch.setup)
         return {"message": "Orchestrator reset successfully"}
     except Exception as e:
-        log.error(f"Reset failed: {e}")
+        log.error("Reset failed: {}", e)
         raise HTTPException(status_code=500, detail="Failed to reset orchestrator.")

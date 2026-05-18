@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Generator
 
-from pandas import DatetimeIndex
 
 
 # =============================================================================
@@ -295,10 +294,10 @@ def _calculate_good_friday(year: int) -> date | None:
         h = (19 * a + b - d - g + 15) % 30
         i = c // 4
         k = c % 4
-        l = (32 + 2 * e + 2 * i - h - k) % 7
-        m = (a + 11 * h + 22 * l) // 451
-        month = (h + l - 7 * m + 114) // 31
-        day = ((h + l - 7 * m + 114) % 31) + 1
+        day_offset = (32 + 2 * e + 2 * i - h - k) % 7
+        m = (a + 11 * h + 22 * day_offset) // 451
+        month = (h + day_offset - 7 * m + 114) // 31
+        day = ((h + day_offset - 7 * m + 114) % 31) + 1
         easter = date(year, month, day)
         return easter - timedelta(days=2)
     except Exception:

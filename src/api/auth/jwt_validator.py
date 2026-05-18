@@ -22,7 +22,7 @@ def get_current_user(
     both HS256 and RS256 signed tokens automatically.
 
     Returns:
-        dict with user claims (sub=user_id, email, aud, exp)
+        dict with user claims (sub=user_id, email, aud) + _token
 
     Raises:
         HTTPException 401 if token is invalid, expired, or missing
@@ -38,9 +38,10 @@ def get_current_user(
             "sub": user.id,
             "email": user.email,
             "aud": "authenticated",
+            "_token": token,  # Pass through for RLS-authenticated clients
         }
     except Exception as e:
-        log.warning(f"Token validation failed: {e}")
+        log.warning("Token validation failed: {}", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",

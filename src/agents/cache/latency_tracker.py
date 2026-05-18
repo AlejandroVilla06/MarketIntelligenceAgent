@@ -18,7 +18,6 @@ Usage:
 from __future__ import annotations
 
 import functools
-import time
 from collections import defaultdict
 from typing import Any, Callable, TypeVar
 
@@ -154,7 +153,7 @@ def track_latency(operation: str) -> Callable[[F], F]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracker = _get_global_tracker()
-            metrics = tracker.start(operation)
+            tracker.start(operation)
             try:
                 result = func(*args, **kwargs)
                 tracker.finish(operation, success=True)

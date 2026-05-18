@@ -10,14 +10,17 @@ from src.utils import get_logger
 log = get_logger("agents.python_repl")
 
 _CALC_KEYWORDS = [
+    # English
     "calculate", "calculation", "compute", "formula",
-    "npv", "irr", "sharpe", "var", "value at risk",
+    "npv", "net present value", "irr", "internal rate",
+    "sharpe", "value at risk",
     "beta", "alpha", "standard deviation", "volatility",
     "correlation", "covariance", "regression",
-    "moving average", "sma", "ema", "rsi",
-    "ratio", "metric", "analysis", "what if",
-    "cálculo", "calcular", "fórmula", "fórmula",
-    "npv", "tir", "sharpe", "beta",
+    "moving average", "sma", "ema",
+    "what if",
+    # Spanish — word-bounded to avoid false positives
+    " cálculo", " calcular", " fórmula",
+    " tir ", " tir.", " van ", " npv ",
 ]
 
 
@@ -33,7 +36,19 @@ class CalculationExecutor(BaseSubOrchestrator):
         if not q:
             return False, 0.0
 
-        matches = sum(1 for kw in _CALC_KEYWORDS if kw in q)
+        # Use word-boundary matching for short keywords (avoid false positives)
+        # and simple substring for multi-word English terms
+        matches = 0
+        for kw in _CALC_KEYWORDS:
+            if kw in q:
+                # Already space-padded for word boundary
+                matches += 1
+            elif len(kw) <= 4 and kw.isalpha():
+                # Short alpha words: require word boundary via regex
+                import re
+                if re.search(rf"\b{kw}\b", q):
+                    matches += 1
+
         if matches >= 2:
             return True, 0.95
         elif matches >= 1:

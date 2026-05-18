@@ -7,7 +7,7 @@ Bollinger Bands, and volume features.
 
 import pytest
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import polars as pl
 from polars import DataFrame
@@ -244,7 +244,7 @@ class TestCalculateMACD:
         """Test MACD with non-existent column."""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = calculate_macd(stock_df, "invalid_col")
+            calculate_macd(stock_df, "invalid_col")
 
             # All series should be empty or have single element
             assert len(w) > 0
@@ -308,7 +308,7 @@ class TestCalculateBollingerBands:
         """Test Bollinger Bands with non-existent column."""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = calculate_bollinger_bands(stock_df, "invalid_col")
+            calculate_bollinger_bands(stock_df, "invalid_col")
 
             assert len(w) > 0
 
@@ -358,7 +358,7 @@ class TestCalculateVolumeFeatures:
         """Test volume features with non-existent column."""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = calculate_volume_features(stock_df, "invalid_col")
+            calculate_volume_features(stock_df, "invalid_col")
 
             assert len(w) > 0
 

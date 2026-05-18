@@ -5,11 +5,9 @@ Tests schema validation, data cleaning functions, and quality reporting.
 """
 
 import pytest
-from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import patch
+from datetime import datetime
+from unittest.mock import Mock, patch
 
-import polars as pl
 from polars import DataFrame
 
 from src.data_engine.validation.validator import (
@@ -34,15 +32,17 @@ class TestValidateStockSchema:
     @pytest.fixture
     def valid_stock_df(self) -> DataFrame:
         """Create a valid stock DataFrame."""
-        return DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(5)],
-            "open": [100.0, 101.0, 102.0, 101.5, 103.0],
-            "high": [105.0, 106.0, 107.0, 106.5, 108.0],
-            "low": [99.0, 100.0, 101.0, 100.5, 102.0],
-            "close": [104.0, 105.0, 106.0, 105.5, 107.0],
-            "volume": [1000000, 1100000, 1200000, 1150000, 1300000],
-            "symbol": ["AAPL"] * 5,
-        })
+        return DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(5)],
+                "open": [100.0, 101.0, 102.0, 101.5, 103.0],
+                "high": [105.0, 106.0, 107.0, 106.5, 108.0],
+                "low": [99.0, 100.0, 101.0, 100.5, 102.0],
+                "close": [104.0, 105.0, 106.0, 105.5, 107.0],
+                "volume": [1000000, 1100000, 1200000, 1150000, 1300000],
+                "symbol": ["AAPL"] * 5,
+            }
+        )
 
     def test_valid_schema(self, valid_stock_df: DataFrame):
         """Test that valid schema passes validation."""
@@ -53,10 +53,12 @@ class TestValidateStockSchema:
 
     def test_missing_columns(self):
         """Test detection of missing required columns."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, 1)],
-            "close": [100.0],
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, 1)],
+                "close": [100.0],
+            }
+        )
 
         is_valid, errors = validate_stock_schema(df)
 
@@ -77,15 +79,17 @@ class TestValidateStockSchema:
     def test_strict_mode_logs_errors(self, mock_log: Mock, valid_stock_df: DataFrame):
         """Test that strict mode logs errors."""
         # Create DataFrame with wrong types
-        invalid_df = DataFrame({
-            "date": ["not-a-date"],  # Wrong type
-            "open": ["100.0"],  # Wrong type
-            "high": [105.0],
-            "low": [99.0],
-            "close": [104.0],
-            "volume": [1000000],
-            "symbol": ["AAPL"],
-        })
+        invalid_df = DataFrame(
+            {
+                "date": ["not-a-date"],  # Wrong type
+                "open": ["100.0"],  # Wrong type
+                "high": [105.0],
+                "low": [99.0],
+                "close": [104.0],
+                "volume": [1000000],
+                "symbol": ["AAPL"],
+            }
+        )
 
         is_valid, errors = validate_stock_schema(invalid_df, strict=True)
 
@@ -98,13 +102,15 @@ class TestValidateNewsSchema:
     @pytest.fixture
     def valid_news_df(self) -> DataFrame:
         """Create a valid news DataFrame."""
-        return DataFrame({
-            "title": [f"News {i}" for i in range(5)],
-            "source": ["Reuters"] * 5,
-            "timestamp": [datetime(2024, 1, i + 1) for i in range(5)],
-            "url": [f"https://example.com/{i}" for i in range(5)],
-            "symbol": ["AAPL"] * 5,
-        })
+        return DataFrame(
+            {
+                "title": [f"News {i}" for i in range(5)],
+                "source": ["Reuters"] * 5,
+                "timestamp": [datetime(2024, 1, i + 1) for i in range(5)],
+                "url": [f"https://example.com/{i}" for i in range(5)],
+                "symbol": ["AAPL"] * 5,
+            }
+        )
 
     def test_valid_schema(self, valid_news_df: DataFrame):
         """Test that valid news schema passes."""
@@ -115,10 +121,12 @@ class TestValidateNewsSchema:
 
     def test_missing_columns(self):
         """Test detection of missing news columns."""
-        df = DataFrame({
-            "title": ["News"],
-            "source": ["Source"],
-        })
+        df = DataFrame(
+            {
+                "title": ["News"],
+                "source": ["Source"],
+            }
+        )
 
         is_valid, errors = validate_news_schema(df)
 
@@ -130,11 +138,13 @@ class TestForwardFill:
 
     def test_forward_fill_basic(self):
         """Test basic forward fill functionality."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
-            "value": [100.0, None],
-            "symbol": ["AAPL", "AAPL"],
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
+                "value": [100.0, None],
+                "symbol": ["AAPL", "AAPL"],
+            }
+        )
 
         result = forward_fill(df, columns=["value"])
 
@@ -150,10 +160,12 @@ class TestForwardFill:
 
     def test_forward_fill_all_numeric_columns(self):
         """Test forward fill with auto-detected columns."""
-        df = DataFrame({
-            "value1": [100.0, None, 102.0],
-            "value2": [50.0, 51.0, None],
-        })
+        df = DataFrame(
+            {
+                "value1": [100.0, None, 102.0],
+                "value2": [50.0, 51.0, None],
+            }
+        )
 
         result = forward_fill(df)
 
@@ -166,11 +178,13 @@ class TestRemoveDuplicates:
 
     def test_remove_duplicates_basic(self):
         """Test basic duplicate removal."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, 1), datetime(2024, 1, 1)],
-            "close": [100.0, 100.0],
-            "symbol": ["AAPL", "AAPL"],
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, 1), datetime(2024, 1, 1)],
+                "close": [100.0, 100.0],
+                "symbol": ["AAPL", "AAPL"],
+            }
+        )
 
         result = remove_duplicates(df)
 
@@ -178,11 +192,13 @@ class TestRemoveDuplicates:
 
     def test_remove_duplicates_by_subset(self):
         """Test duplicate removal by specific columns."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
-            "close": [100.0, 101.0],
-            "symbol": ["AAPL", "AAPL"],
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
+                "close": [100.0, 101.0],
+                "symbol": ["AAPL", "AAPL"],
+            }
+        )
 
         result = remove_duplicates(df, subset=["symbol"])
 
@@ -203,15 +219,17 @@ class TestRemoveInvalidPrices:
 
     def test_remove_negative_prices(self):
         """Test removal of negative prices."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(3)],
-            "open": [100.0, -5.0, 102.0],
-            "high": [105.0, 103.0, 107.0],
-            "low": [99.0, 97.0, 101.0],
-            "close": [104.0, 102.0, 106.0],
-            "volume": [1000000] * 3,
-            "symbol": ["AAPL"] * 3,
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(3)],
+                "open": [100.0, -5.0, 102.0],
+                "high": [105.0, 103.0, 107.0],
+                "low": [99.0, 97.0, 101.0],
+                "close": [104.0, 102.0, 106.0],
+                "volume": [1000000] * 3,
+                "symbol": ["AAPL"] * 3,
+            }
+        )
 
         result = remove_invalid_prices(df)
 
@@ -220,15 +238,17 @@ class TestRemoveInvalidPrices:
 
     def test_remove_zero_prices(self):
         """Test removal of zero prices."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(3)],
-            "open": [100.0, 0.0, 102.0],
-            "high": [105.0, 103.0, 107.0],
-            "low": [99.0, 97.0, 101.0],
-            "close": [104.0, 102.0, 106.0],
-            "volume": [1000000] * 3,
-            "symbol": ["AAPL"] * 3,
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(3)],
+                "open": [100.0, 0.0, 102.0],
+                "high": [105.0, 103.0, 107.0],
+                "low": [99.0, 97.0, 101.0],
+                "close": [104.0, 102.0, 106.0],
+                "volume": [1000000] * 3,
+                "symbol": ["AAPL"] * 3,
+            }
+        )
 
         result = remove_invalid_prices(df)
 
@@ -250,11 +270,24 @@ class TestRemoveOutliersIQR:
     def test_remove_outliers_basic(self):
         """Test basic outlier removal using IQR."""
         # Create data with clear outlier
-        df = DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(10)],
-            "volume": [1000000, 1100000, 1200000, 1150000, 1300000, 1050000, 1250000, 10000000, 1100000, 1200000],
-            "symbol": ["AAPL"] * 10,
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(10)],
+                "volume": [
+                    1000000,
+                    1100000,
+                    1200000,
+                    1150000,
+                    1300000,
+                    1050000,
+                    1250000,
+                    10000000,
+                    1100000,
+                    1200000,
+                ],
+                "symbol": ["AAPL"] * 10,
+            }
+        )
 
         result = remove_outliers_iqr(df, column="volume", multiplier=1.5)
 
@@ -263,10 +296,12 @@ class TestRemoveOutliersIQR:
 
     def test_remove_outliers_missing_column(self):
         """Test handling of missing column."""
-        df = DataFrame({
-            "date": [datetime(2024, 1, 1)],
-            "value": [100.0],
-        })
+        df = DataFrame(
+            {
+                "date": [datetime(2024, 1, 1)],
+                "value": [100.0],
+            }
+        )
 
         result = remove_outliers_iqr(df, column="nonexistent")
 
@@ -288,15 +323,23 @@ class TestCleanStockData:
     @pytest.fixture
     def dirty_stock_df(self) -> DataFrame:
         """Create a dirty stock DataFrame."""
-        return DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(5)],
-            "open": [100.0, None, 102.0, 0.0, 104.0],
-            "high": [105.0, 106.0, 107.0, 105.5, 108.0],
-            "low": [99.0, 100.0, 101.0, -5.0, 102.0],
-            "close": [104.0, 105.0, 106.0, 105.5, 107.0],
-            "volume": [1000000, 1100000, 1200000, 1150000, 1000000000],  # Last is outlier
-            "symbol": ["AAPL"] * 5,
-        })
+        return DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(5)],
+                "open": [100.0, None, 102.0, 0.0, 104.0],
+                "high": [105.0, 106.0, 107.0, 105.5, 108.0],
+                "low": [99.0, 100.0, 101.0, -5.0, 102.0],
+                "close": [104.0, 105.0, 106.0, 105.5, 107.0],
+                "volume": [
+                    1000000,
+                    1100000,
+                    1200000,
+                    1150000,
+                    1000000000,
+                ],  # Last is outlier
+                "symbol": ["AAPL"] * 5,
+            }
+        )
 
     def test_clean_stock_data_basic(self, dirty_stock_df: DataFrame):
         """Test basic stock data cleaning."""
@@ -327,13 +370,19 @@ class TestCleanNewsData:
     @pytest.fixture
     def dirty_news_df(self) -> DataFrame:
         """Create a dirty news DataFrame."""
-        return DataFrame({
-            "title": ["Title 1", "Title 1", "Title 2"],
-            "source": ["Source"] * 3,
-            "timestamp": [datetime.now()] * 3,
-            "url": ["https://example.com/1", "https://example.com/1", "https://example.com/2"],
-            "symbol": ["AAPL"] * 3,
-        })
+        return DataFrame(
+            {
+                "title": ["Title 1", "Title 1", "Title 2"],
+                "source": ["Source"] * 3,
+                "timestamp": [datetime.now()] * 3,
+                "url": [
+                    "https://example.com/1",
+                    "https://example.com/1",
+                    "https://example.com/2",
+                ],
+                "symbol": ["AAPL"] * 3,
+            }
+        )
 
     def test_clean_news_data_basic(self, dirty_news_df: DataFrame):
         """Test basic news data cleaning."""
@@ -357,15 +406,17 @@ class TestGenerateQualityReport:
     @pytest.fixture
     def sample_stock_df(self) -> DataFrame:
         """Create a sample stock DataFrame."""
-        return DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(5)],
-            "open": [100.0, 101.0, 102.0, 101.5, 103.0],
-            "high": [105.0, 106.0, 107.0, 106.5, 108.0],
-            "low": [99.0, 100.0, 101.0, 100.5, 102.0],
-            "close": [104.0, 105.0, 106.0, 105.5, 107.0],
-            "volume": [1000000, 1100000, 1200000, 1150000, 1300000],
-            "symbol": ["AAPL"] * 5,
-        })
+        return DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(5)],
+                "open": [100.0, 101.0, 102.0, 101.5, 103.0],
+                "high": [105.0, 106.0, 107.0, 106.5, 108.0],
+                "low": [99.0, 100.0, 101.0, 100.5, 102.0],
+                "close": [104.0, 105.0, 106.0, 105.5, 107.0],
+                "volume": [1000000, 1100000, 1200000, 1150000, 1300000],
+                "symbol": ["AAPL"] * 5,
+            }
+        )
 
     def test_generate_quality_report_stock(self, sample_stock_df: DataFrame):
         """Test quality report generation for stock data."""
@@ -378,13 +429,15 @@ class TestGenerateQualityReport:
 
     def test_generate_quality_report_news(self):
         """Test quality report generation for news data."""
-        df = DataFrame({
-            "title": ["Title 1", "Title 2"],
-            "source": ["Source1", "Source2"],
-            "timestamp": [datetime.now()] * 2,
-            "url": ["https://example.com/1", "https://example.com/2"],
-            "symbol": ["AAPL", "GOOGL"],
-        })
+        df = DataFrame(
+            {
+                "title": ["Title 1", "Title 2"],
+                "source": ["Source1", "Source2"],
+                "timestamp": [datetime.now()] * 2,
+                "url": ["https://example.com/1", "https://example.com/2"],
+                "symbol": ["AAPL", "GOOGL"],
+            }
+        )
 
         report = generate_quality_report(df, data_type="news")
 
@@ -419,15 +472,17 @@ class TestValidateDataframe:
     @pytest.fixture
     def valid_stock_df(self) -> DataFrame:
         """Create a valid stock DataFrame."""
-        return DataFrame({
-            "date": [datetime(2024, 1, i + 1) for i in range(5)],
-            "open": [100.0, 101.0, 102.0, 101.5, 103.0],
-            "high": [105.0, 106.0, 107.0, 106.5, 108.0],
-            "low": [99.0, 100.0, 101.0, 100.5, 102.0],
-            "close": [104.0, 105.0, 106.0, 105.5, 107.0],
-            "volume": [1000000, 1100000, 1200000, 1150000, 1300000],
-            "symbol": ["AAPL"] * 5,
-        })
+        return DataFrame(
+            {
+                "date": [datetime(2024, 1, i + 1) for i in range(5)],
+                "open": [100.0, 101.0, 102.0, 101.5, 103.0],
+                "high": [105.0, 106.0, 107.0, 106.5, 108.0],
+                "low": [99.0, 100.0, 101.0, 100.5, 102.0],
+                "close": [104.0, 105.0, 106.0, 105.5, 107.0],
+                "volume": [1000000, 1100000, 1200000, 1150000, 1300000],
+                "symbol": ["AAPL"] * 5,
+            }
+        )
 
     def test_validate_dataframe_stock(self, valid_stock_df: DataFrame):
         """Test full dataframe validation for stock."""
@@ -438,13 +493,15 @@ class TestValidateDataframe:
 
     def test_validate_dataframe_news(self):
         """Test full dataframe validation for news."""
-        df = DataFrame({
-            "title": ["Title"],
-            "source": ["Source"],
-            "timestamp": [datetime.now()],
-            "url": ["https://example.com"],
-            "symbol": ["AAPL"],
-        })
+        df = DataFrame(
+            {
+                "title": ["Title"],
+                "source": ["Source"],
+                "timestamp": [datetime.now()],
+                "url": ["https://example.com"],
+                "symbol": ["AAPL"],
+            }
+        )
 
         is_valid, report = validate_dataframe(df, data_type="news")
 

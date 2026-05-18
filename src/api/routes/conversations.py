@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from src.api.auth.jwt_validator import get_current_user
 from src.api.deps import get_conversations
-from src.api.schemas.chat import ConversationListItem
 from src.api.state import SupabaseConversationStore
 from src.utils import get_logger
 

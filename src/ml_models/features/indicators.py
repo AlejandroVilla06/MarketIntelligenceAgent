@@ -35,6 +35,7 @@ logger = get_logger(__name__)
 
 class MACDResult(TypedDict):
     """MACD calculation result."""
+
     macd: Series
     signal: Series
     histogram: Series
@@ -42,6 +43,7 @@ class MACDResult(TypedDict):
 
 class BollingerBandsResult(TypedDict):
     """Bollinger Bands calculation result."""
+
     upper: Series
     middle: Series
     lower: Series
@@ -49,6 +51,7 @@ class BollingerBandsResult(TypedDict):
 
 class VolumeFeaturesResult(TypedDict):
     """Volume features calculation result."""
+
     volume_sma: Series
     volume_ratio: Series
 
@@ -81,25 +84,23 @@ def calculate_sma(df: DataFrame, column: str = "close", period: int = 20) -> Ser
         Series: 'sma_3' [None, None, 101.0, 102.0, 103.0]
     """
     if column not in df.columns:
-        warnings.warn(f"Column '{column}' not found in DataFrame. Returning empty Series.")
-        return Series(f"sma_{period}")
+        warnings.warn(
+            f"Column '{column}' not found in DataFrame. Returning empty Series."
+        )
+        return Series(f"sma_{period}", [None])
 
     if period <= 0:
         warnings.warn(f"Invalid period {period}. Using absolute value.")
-        period = abs(period)
+        period = max(1, abs(period))
 
     if df.height < period:
         warnings.warn(
             f"Insufficient data: {df.height} rows for period {period}. "
             f"Need at least {period} data points."
         )
-        return Series(f"sma_{period}")
+        return Series(f"sma_{period}", [None])
 
-    sma_series = (
-        df.select(pl.col(column))
-        .rolling_mean(period)
-        .rename(f"sma_{period}")
-    )
+    sma_series = df.get_column(column).rolling_mean(period).rename(f"sma_{period}")
 
     logger.debug(f"Calculated SMA_{period} for {column}: {sma_series.len()} values")
     return sma_series
@@ -132,25 +133,23 @@ def calculate_ema(df: DataFrame, column: str = "close", period: int = 12) -> Ser
         Series: 'ema_3' [None, None, None, 102.666..., 103.44...]
     """
     if column not in df.columns:
-        warnings.warn(f"Column '{column}' not found in DataFrame. Returning empty Series.")
-        return Series(f"ema_{period}")
+        warnings.warn(
+            f"Column '{column}' not found in DataFrame. Returning empty Series."
+        )
+        return Series(f"ema_{period}", [None])
 
     if period <= 0:
         warnings.warn(f"Invalid period {period}. Using absolute value.")
-        period = abs(period)
+        period = max(1, abs(period))
 
     if df.height < period:
         warnings.warn(
             f"Insufficient data: {df.height} rows for period {period}. "
             f"Need at least {period} data points."
         )
-        return Series(f"ema_{period}")
+        return Series(f"ema_{period}", [None])
 
-    ema_series = (
-        df.select(pl.col(column))
-        .rolling_ewm_mean(period)
-        .rename(f"ema_{period}")
-    )
+    ema_series = df.get_column(column).ewm_mean(span=period).rename(f"ema_{period}")
 
     logger.debug(f"Calculated EMA_{period} for {column}: {ema_series.len()} values")
     return ema_series
@@ -184,39 +183,52 @@ def calculate_rsi(df: DataFrame, column: str = "close", period: int = 14) -> Ser
         Series: 'rsi_3' [None, None, None, 80.0, 85.71..., 90.0, 93.33...]
     """
     if column not in df.columns:
-        warnings.warn(f"Column '{column}' not found in DataFrame. Returning empty Series.")
-        return Series(f"rsi_{period}")
+        warnings.warn(
+            f"Column '{column}' not found in DataFrame. Returning empty Series."
+        )
+        return Series(f"rsi_{period}", [None])
 
     if period <= 0:
         warnings.warn(f"Invalid period {period}. Using absolute value.")
-        period = abs(period)
+        period = max(1, abs(period))
 
     if df.height < period + 1:
         warnings.warn(
             f"Insufficient data: {df.height} rows for period {period}. "
             f"Need at least {period + 1} data points."
         )
-        return Series(f"rsi_{period}")
+        return Series(f"rsi_{period}", [None])
 
     # Calculate price changes (differences)
-    price_series = df.column(column)
+    price_series = df.get_column(column)
     changes = price_series.diff()
 
     # Compute gains (positive changes) and losses (negative changes as positive values)
-    gains = changes.map(
-        lambda x: x if x is not None and x > 0 else 0.0
+    gains = changes.map_elements(
+        lambda x: x if x is not None and x > 0 else 0.0, return_dtype=pl.Float64
     )
-    losses = changes.map(
-        lambda x: abs(x) if x is not None and x < 0 else 0.0
+    losses = changes.map_elements(
+        lambda x: abs(x) if x is not None and x < 0 else 0.0, return_dtype=pl.Float64
     )
 
     # Calculate average gains and losses using EMA (Wilder's smoothing method)
-    avg_gain = pl.Series("avg_gain", gains).ewm_mean(period, alpha=1.0/period)
-    avg_loss = pl.Series("avg_loss", losses).ewm_mean(period, alpha=1.0/period)
+    avg_gain = pl.Series("avg_gain", gains).ewm_mean(alpha=1.0 / period)
+    avg_loss = pl.Series("avg_loss", losses).ewm_mean(alpha=1.0 / period)
 
     # Calculate RS and RSI
     rs = avg_gain / avg_loss
-    rsi_values = rs.map(lambda x: 100.0 - (100.0 / (1.0 + x)) if x is not None and x > 0 else 50.0 if x == 0 else 100.0 if x == float('inf') else 0.0)
+    rsi_values = rs.map_elements(
+        lambda x: (
+            100.0 - (100.0 / (1.0 + x))
+            if x is not None and x > 0
+            else 50.0
+            if x == 0
+            else 100.0
+            if x == float("inf")
+            else 0.0
+        ),
+        return_dtype=pl.Float64,
+    )
     rsi_series = pl.Series(f"rsi_{period}", rsi_values)
 
     logger.debug(f"Calculated RSI_{period} for {column}: {rsi_series.len()} values")
@@ -265,7 +277,9 @@ def calculate_macd(
         Series: 'macd_12_26' [...]
     """
     if column not in df.columns:
-        warnings.warn(f"Column '{column}' not found in DataFrame. Returning empty result.")
+        warnings.warn(
+            f"Column '{column}' not found in DataFrame. Returning empty result."
+        )
         empty_series = Series("macd")
         return {
             "macd": empty_series,
@@ -313,9 +327,9 @@ def calculate_macd(
     macd_series = pl.Series(f"macd_{fast_period}_{slow_period}", macd_values)
 
     # Signal line = EMA of MACD line (using ewm_mean)
-    signal_series = pl.Series(f"macd_{fast_period}_{slow_period}", macd_values).ewm_mean(
-        signal_period, alpha=1.0/signal_period
-    )
+    signal_series = pl.Series(
+        f"macd_{fast_period}_{slow_period}", macd_values
+    ).ewm_mean(alpha=1.0 / signal_period)
     signal_series = signal_series.rename(f"macd_signal_{signal_period}")
 
     # Histogram = MACD line - signal line
@@ -325,7 +339,9 @@ def calculate_macd(
         m - s if m is not None and s is not None else None
         for m, s in zip(macd_list, signal_list)
     ]
-    histogram_series = pl.Series(f"macd_hist_{fast_period}_{slow_period}", histogram_values)
+    histogram_series = pl.Series(
+        f"macd_hist_{fast_period}_{slow_period}", histogram_values
+    )
 
     result: MACDResult = {
         "macd": macd_series,
@@ -381,7 +397,9 @@ def calculate_bollinger_bands(
         Series: 'bb_upper_20' [...]
     """
     if column not in df.columns:
-        warnings.warn(f"Column '{column}' not found in DataFrame. Returning empty result.")
+        warnings.warn(
+            f"Column '{column}' not found in DataFrame. Returning empty result."
+        )
         empty_series = Series("bb_upper_20")
         return {
             "upper": empty_series,
@@ -414,11 +432,7 @@ def calculate_bollinger_bands(
     middle_band = middle_band.rename(f"bb_middle_{period}")
 
     # Calculate rolling standard deviation
-    std_series = (
-        df.select(pl.col(column))
-        .rolling_std(period)
-        .rename(f"bb_std_{period}")
-    )
+    std_series = df.get_column(column).rolling_std(period).rename(f"bb_std_{period}")
 
     # Calculate upper and lower bands
     upper_band = (middle_band + num_std * std_series).alias(f"bb_upper_{period}")
@@ -431,8 +445,7 @@ def calculate_bollinger_bands(
     }
 
     logger.debug(
-        f"Calculated Bollinger Bands({period}, {num_std}): "
-        f"{len(upper_band)} values"
+        f"Calculated Bollinger Bands({period}, {num_std}): {len(upper_band)} values"
     )
     return result
 
@@ -472,7 +485,9 @@ def calculate_volume_features(
         Series: 'volume_sma_20' [...]
     """
     if column not in df.columns:
-        warnings.warn(f"Column '{column}' not found in DataFrame. Returning empty result.")
+        warnings.warn(
+            f"Column '{column}' not found in DataFrame. Returning empty result."
+        )
         empty_series = Series("volume_sma_20")
         return {
             "volume_sma": empty_series,
@@ -499,16 +514,13 @@ def calculate_volume_features(
     volume_sma = volume_sma.rename(f"volume_sma_{period}")
 
     # Calculate volume ratio
-    current_volume = df.column(column)
-    volume_ratio_series = (
-        (current_volume / volume_sma)
-        .alias(f"volume_ratio_{period}")
-    )
+    current_volume = df.get_column(column)
+    volume_ratio_series = (current_volume / volume_sma).alias(f"volume_ratio_{period}")
 
     # Handle division by zero and inf values
     volume_ratio_series = volume_ratio_series.map_elements(
-        lambda x: 1.0 if x == float('inf') or x != x else x,  # x != x checks for NaN
-        return_dtype=float
+        lambda x: 1.0 if x == float("inf") or x != x else x,  # x != x checks for NaN
+        return_dtype=float,
     )
 
     result: VolumeFeaturesResult = {
@@ -516,10 +528,7 @@ def calculate_volume_features(
         "volume_ratio": volume_ratio_series,
     }
 
-    logger.debug(
-        f"Calculated Volume Features({period}): "
-        f"{len(volume_sma)} values"
-    )
+    logger.debug(f"Calculated Volume Features({period}): {len(volume_sma)} values")
     return result
 
 

@@ -13,11 +13,19 @@ Usage:
     cached = cache.get(query, model_id)
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from src.agents.cache.models import CacheEntry, LatencyMetrics, AggregatedLatencyMetrics
 
+if TYPE_CHECKING:
+    from src.agents.cache.latency_tracker import LatencyTracker
+    from src.agents.cache.semantic_cache import SemanticCache
+
 # Lazy imports to avoid circular dependencies
-_latency_tracker: "LatencyTracker | None" = None
-_semantic_cache: "SemanticCache | None" = None
+_latency_tracker: LatencyTracker | None = None
+_semantic_cache: SemanticCache | None = None
 
 
 def get_latency_tracker() -> "LatencyTracker":
@@ -32,7 +40,7 @@ def get_latency_tracker() -> "LatencyTracker":
 def get_cache_instance(
     similarity_threshold: float | None = None,
     ttl_seconds: int | None = None,
-) -> "SemanticCache":
+) -> SemanticCache:
     """Get or create the SemanticCache singleton.
     
     Args:

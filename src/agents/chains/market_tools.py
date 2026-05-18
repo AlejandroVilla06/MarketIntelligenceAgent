@@ -52,9 +52,10 @@ def query_stocks_tool(
     """
     from src.agents.retriever import MarketRAGRetriever
 
-    def _execute():
+    k_val = k or settings.rag_default_k
+
+    def _execute(k=k_val):
         retriever = MarketRAGRetriever()
-        k = k or settings.rag_default_k
         return retriever.query_stocks(query, k)
 
     return _track_operation("query_stocks", _execute)
@@ -77,9 +78,10 @@ def query_news_tool(
     """
     from src.agents.retriever import MarketRAGRetriever
 
-    def _execute():
+    k_val = k or settings.rag_default_k
+
+    def _execute(k=k_val):
         retriever = MarketRAGRetriever()
-        k = k or settings.rag_default_k
         return retriever.query_news(query, k)
 
     return _track_operation("query_news", _execute)
@@ -102,9 +104,10 @@ def query_sentiment_tool(
     """
     from src.agents.retriever import MarketRAGRetriever
 
-    def _execute():
+    k_val = k or settings.rag_default_k
+
+    def _execute(k=k_val):
         retriever = MarketRAGRetriever()
-        k = k or settings.rag_default_k
         return retriever.query_sentiment(query, k)
 
     return _track_operation("query_sentiment", _execute)

@@ -79,7 +79,7 @@ def get_cache_stats() -> dict[str, Any]:
     try:
         from src.agents.cache import get_cache_instance
         
-        cache = get_cache_instance()
+        get_cache_instance()
         # Get stats from cache store if available
         # This is implementation-dependent
         

@@ -9,7 +9,7 @@ import asyncio
 from fastapi import Depends
 
 from src.market_orchestrator.orchestrator import MarketOrchestrator
-from src.api.auth.supabase_client import get_supabase_client
+from src.api.auth.supabase_client import get_authenticated_client
 from src.api.auth.jwt_validator import get_current_user
 from src.api.state import SupabaseConversationStore
 from src.utils import get_logger
@@ -34,7 +34,7 @@ async def init_orchestrator() -> None:
                 _orchestrator = orch
                 log.info("Orchestrator initialized successfully")
             except Exception as e:
-                log.warning(f"Orchestrator init failed (will retry on first request): {e}")
+                log.warning("Orchestrator init failed (will retry on first request): {}", e)
                 # Don't set _orchestrator — next get_orchestrator() will retry
 
 
@@ -58,6 +58,15 @@ async def get_conversations(
     user: dict = Depends(get_current_user),
 ) -> SupabaseConversationStore:
     """Dependency: creates a Supabase-backed conversation store scoped to the current user."""
-    supabase = get_supabase_client()
+    token = user.get("_token", "")
+    if not token:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Missing authentication token.")
+    try:
+        supabase = get_authenticated_client(token)
+    except Exception as e:
+        log.error("Failed to create Supabase client: {}", e)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Database unavailable. Check Supabase credentials.")
     user_id = user.get("sub", "")
     return SupabaseConversationStore(supabase, user_id)

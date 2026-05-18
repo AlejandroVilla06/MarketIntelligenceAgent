@@ -23,7 +23,7 @@ from src.config import settings
 from src.utils import get_logger
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    import polars as pl
 
 # =============================================================================
 # CHROMADB COLLECTION CONSTANTS
@@ -117,7 +117,7 @@ class MarketRAGRetriever:
     # ADD DATA METHODS
     # =============================================================================
 
-    def add_stock_data(self, df: "pl.DataFrame") -> None:
+    def add_stock_data(self, df: pl.DataFrame) -> None:
         """
         Add stock data to the market_stocks collection.
 
@@ -127,7 +127,6 @@ class MarketRAGRetriever:
             df: Polars DataFrame with stock data.
                  Expected columns: symbol, date, close, volume, [rsi_14]
         """
-        import polars as pl
 
         if df.is_empty():
             return

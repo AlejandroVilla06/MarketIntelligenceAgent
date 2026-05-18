@@ -18,11 +18,12 @@ sys.path.insert(0, str(project_root))
 
 # Import directly to avoid agent imports
 import importlib.util
+
 spec = importlib.util.spec_from_file_location(
-    "cache_models",
-    project_root / "src" / "agents" / "cache" / "models.py"
+    "cache_models", project_root / "src" / "agents" / "cache" / "models.py"
 )
 cache_models = importlib.util.module_from_spec(spec)
+sys.modules["cache_models"] = cache_models
 spec.loader.exec_module(cache_models)
 
 CacheEntry = cache_models.CacheEntry

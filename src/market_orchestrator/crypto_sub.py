@@ -8,6 +8,7 @@ log = get_logger("agents.crypto_sub")
 
 _CRYPTO_KEYWORDS = [
     "bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency",
+    "cripto", "criptomoneda", "criptomonedas",
     "solana", "sol", "xrp", "cardano", "ada", "polkadot", "dot",
     "dogecoin", "doge", "avalanche", "avax", "chainlink", "link",
     "polygon", "matic", "uniswap", "uni", "coin", "token",
@@ -46,7 +47,7 @@ class CryptoSubOrchestrator(BaseSubOrchestrator):
             return data  # Fallback to raw data if no LLM
         
         try:
-            prompt = f"""Sos un analista de criptomonedas. El usuario preguntó:
+            prompt = f"""Sos un ASESOR DE INVERSIONES en criptomonedas. El usuario preguntó:
 
 "{query}"
 
@@ -54,14 +55,17 @@ DATOS EN TIEMPO REAL (CoinMarketCap):
 {data}
 
 Instrucciones:
+- Actuá como ASESOR FINANCIERO, no como programador
+- Si el usuario pregunta "en qué invertir" o busca consejo, recomendá activos concretos (ej: BTC, ETH, SOL) con fundamento de mercado
+- NUNCA generes código Python ni pidas al usuario que ejecute scripts
 - Respondé en el mismo idioma de la consulta
 - Analizá los datos como un analista financiero, no los listes crudos
-- Incluí contexto: ¿el precio subió o bajó? ¿qué implica?
+- Incluí contexto: ¿el precio subió o bajó? ¿qué implica para un inversor?
 - Mencioná fuentes: CoinMarketCap para datos en tiempo real
-- Formato: narrativo, ejecutivo, en párrafos cortos"""
+- Formato: narrativo, ejecutivo, sin código, en párrafos cortos"""
             
             response = llm.invoke([
-                {"role": "system", "content": "Sos un analista de criptomonedas con datos en tiempo real de CoinMarketCap."},
+                {"role": "system", "content": "Sos un asesor de inversiones en criptomonedas con datos en tiempo real de CoinMarketCap. NUNCA generás código Python. Tu objetivo es ACONSEJAR, no programar."},
                 {"role": "user", "content": prompt},
             ])
             return response.content if hasattr(response, 'content') else str(response)

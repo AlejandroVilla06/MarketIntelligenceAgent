@@ -7,11 +7,16 @@ from src.utils import get_logger
 log = get_logger("agents.stocks_sub")
 
 _STOCK_KEYWORDS = [
+    # English
     "stock", "stocks", "market", "equity", "equities", "share", "shares",
     "aapl", "msft", "googl", "nvda", "amzn", "tsla", "meta",
     "price", "volume", "rsi", "market cap", "pe ratio", "dividend",
     "earnings", "revenue", "profit", "sec filing", "ipo",
-    "acción", "acciones", "bolsa", "precio", "cotización",
+    "invest", "investment", "portfolio", "strategy",
+    # Spanish
+    "acción", "acciones", "accion", "acciones", "bolsa", "precio", "cotización",
+    "invertir", "inversión", "inversion", "invierta", "invierto",
+    "cartera", "portafolio", "estrategia", "comprar", "vender", "recomienda", "recomiendas",
 ]
 
 

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from polars import DataFrame
 
 if TYPE_CHECKING:
-    from polars import Series
+    pass
 
 
 # =============================================================================
