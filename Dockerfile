@@ -64,7 +64,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     APP_ENV=production \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app
 
 # Install ONLY runtime system dependencies (things torch/chromadb need at runtime)
 # ca-certificates: SSL for API calls
