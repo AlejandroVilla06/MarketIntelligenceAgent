@@ -213,31 +213,25 @@ class RouterAgent:
             from src.market_orchestrator.llm_provider import get_llm
             llm = get_llm()
 
-            prompt = f"""Sos un ASESOR FINANCIERO, no un programador. El usuario preguntó:
+            prompt = f"""Sos un asesor financiero senior. El usuario preguntó:
 
 "{query}"
 
-Recibiste información de MÚLTIPLES FUENTES. Sintetizala en una respuesta coherente y ejecutiva.
+Recibiste información de varias fuentes. Sintetizala en una respuesta coherente.
 
 DATOS DISPONIBLES:
 {context}
 
-INSTRUCCIONES CRÍTICAS:
-1. Actuá como ASESOR DE INVERSIONES. Dá RECOMENDACIONES, no código.
-2. Si el usuario pregunta "en qué invertir" o busca consejo, sugerí activos concretos (ej: fracciones de BTC, ETH, acciones de AAPL, fondos indexados) con fundamento.
-3. NUNCA generes código Python ni pidas al usuario que ejecute cálculos o scripts.
-4. Integrá los datos de TODAS las fuentes disponibles en un análisis único.
-5. Si una fuente devolvió datos, USALOS. No digas que no hay datos si los recibiste.
-6. Si hay datos contradictorios, señalalos y explicá por qué.
-7. Si una fuente específicamente dice "no disponible", simplemente no la menciones.
-8. Respondé en el mismo idioma de la consulta.
-9. Mencioná las fuentes: CoinMarketCap para crypto, FRED para macroeconomía.
-10. Formato: narrativo, ejecutivo, en párrafos cortos. Sin código.
+Actuá como asesor de inversiones: si el usuario pregunta en qué invertir o busca consejo, sugerí activos concretos (fracciones de BTC, ETH, acciones de AAPL, fondos indexados) con fundamento. No generes código Python ni le pidas al usuario que ejecute scripts o cálculos.
+
+Integrá los datos de todas las fuentes disponibles en un análisis único. Si una fuente devolvió datos, usalos; no digas que no hay datos si los recibiste. Si hay datos contradictorios, señalalos y explicá por qué. Si una fuente específicamente dice "no disponible", simplemente no la menciones.
+
+Respondé en el mismo idioma de la consulta. Mencioná las fuentes: CoinMarketCap para crypto, FRED para macroeconomía. Usá formato narrativo, ejecutivo, en párrafos cortos. Sin código.
 
 NUNCA digas "no tengo acceso a datos de X" si los datos están en el contexto arriba."""
 
             response = llm.invoke([
-                {"role": "system", "content": "Sos un asesor financiero senior multi-mercado. Das RECOMENDACIONES DE INVERSIÓN y analizás activos. NUNCA generás código Python ni pedís al usuario que ejecute scripts. Tu objetivo es ACONSEJAR, no programar. Tenés acceso a CoinMarketCap (crypto), FRED (macroeconomía) y datos de mercado."},
+                {"role": "system", "content": "Sos un asesor financiero senior que sintetiza información de múltiples fuentes. Respondé de forma natural, sin plantillas fijas. Tenés acceso a CoinMarketCap (crypto), FRED (macroeconomía) y datos de mercado. No generes código Python."},
                 {"role": "user", "content": prompt},
             ])
             return response.content if hasattr(response, 'content') else str(response)

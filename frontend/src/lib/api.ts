@@ -1,7 +1,7 @@
 // API proxy via Next.js rewrites (next.config.mjs)
 // En development, /api/* se redirige a http://localhost:8000/api/*
 const API_URL = "";
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 60000;
 const MAX_RETRIES = 2;
 
 class ApiError extends Error {
@@ -204,6 +204,11 @@ export const api = {
 		get: (id: string) => request<any>(`/api/conversations/${id}`),
 		create: () =>
 			request<{ id: string }>("/api/conversations", { method: "POST" }),
+		rename: (id: string, title: string) =>
+			request<any>(`/api/conversations/${id}`, {
+				method: "PUT",
+				body: JSON.stringify({ title }),
+			}),
 		delete: (id: string) =>
 			request<any>(`/api/conversations/${id}`, { method: "DELETE" }),
 	},

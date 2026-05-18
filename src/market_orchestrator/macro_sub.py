@@ -44,15 +44,10 @@ class MacroSubOrchestrator(BaseSubOrchestrator):
 DATOS MACROECONÓMICOS EN TIEMPO REAL (FRED - Federal Reserve):
 {data}
 
-Instrucciones:
-- Respondé en el mismo idioma de la consulta
-- Analizá los datos como un economista: ¿qué implican para la economía?
-- Incluí contexto histórico si es relevante
-- Mencioná fuentes: FRED (Federal Reserve Economic Data)
-- Formato: narrativo, ejecutivo, en párrafos cortos"""
+Respondé natural, sin estructura fija. Analizá los datos como un economista: ¿qué implican para la economía? Incluí contexto histórico si es relevante. Mencioná FRED (Federal Reserve Economic Data) como fuente. Respondé en el mismo idioma de la consulta. Usá un tono narrativo, como si estuvieras explicando la situación económica a un cliente."""
 
             response = llm.invoke([
-                {"role": "system", "content": "Sos un economista senior con datos macroeconómicos en tiempo real de la Reserva Federal (FRED)."},
+                {"role": "system", "content": "Sos un economista senior con datos macroeconómicos en tiempo real de la Reserva Federal (FRED). Respondé de forma natural, sin plantillas fijas."},
                 {"role": "user", "content": prompt},
             ])
             return response.content if hasattr(response, 'content') else str(response)

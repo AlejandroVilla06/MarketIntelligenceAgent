@@ -117,6 +117,17 @@ class SupabaseConversationStore:
 
         return convs
 
+    async def rename(self, cid: str, title: str) -> bool:
+        """Rename a conversation (scoped to user)."""
+        result = await asyncio.to_thread(
+            self._supabase.table("conversations")
+                .update({"title": title})
+                .eq("id", cid)
+                .eq("user_id", self._user_id)
+                .execute
+        )
+        return len(result.data) > 0
+
     async def add_message(self, cid: str, role: str, content: str) -> bool:
         """Add a message to a conversation.
 
@@ -133,11 +144,11 @@ class SupabaseConversationStore:
         if not result.data:
             return False
 
-        # Auto-title: first user message becomes conversation title
+        # Auto-title: first user message becomes conversation title (exact content)
         if role == "user":
             conv = await self.get(cid)
             if conv and conv.get("title") in ("Nueva conversación", "Chat"):
-                new_title = (content[:42] + "…") if len(content) > 42 else content
+                new_title = (content[:100] + "…") if len(content) > 100 else content
                 await asyncio.to_thread(
                     self._supabase.table("conversations")
                         .update({"title": new_title})
