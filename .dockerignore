@@ -1,0 +1,61 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .dockerignore — Market Intelligence Agent
+# Excludes everything NOT needed at runtime to minimise build context and
+# prevent secret leakage into the image.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment — NEVER ship .env files into an image
+.env
+.env.local
+.env.example
+
+# Data (persisted via volume in production)
+data/raw/
+data/processed/
+
+# Logs (persisted via volume)
+logs/
+
+# Node / Frontend (separate container)
+frontend/
+node_modules/
+
+# ML training artifacts (regenerated at runtime or mounted)
+src/ml_models/saved/
+
+# IDE & OS detritus
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitattributes
+.gitignore
+
+# Project tooling
+.atl/
+.pi/
+.python-version
+
+# SDD documentation (not needed at runtime)
+openspec/
+
+# Tests (not shipped to production)
+tests/
+
+# Temp / cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

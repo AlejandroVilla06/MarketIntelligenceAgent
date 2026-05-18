@@ -444,17 +444,29 @@ def get_settings() -> Settings:
     Get cached application settings.
 
     Settings are loaded once and cached for the lifetime of the process.
-    Call load_dotenv() first to load from .env file.
+
+    **Security**: In production (APP_ENV=production), ONLY system environment
+    variables are used — the .env file is NEVER loaded. This prevents
+    credential leaks from accidentally included .env files in the container.
+
+    In development, .env is loaded as a fallback for convenience.
 
     Returns:
         Settings: Singleton settings instance
     """
-    # Ensure .env file is loaded
+    # ── Production mode: EXCLUSIVELY system env vars ──────────────────────
+    # No .env file is read. All credentials MUST come from the orchestration
+    # layer (Docker/K8s secrets, CI/CD pipelines, etc.).
+    if os.getenv("APP_ENV", "").lower() == "production":
+        settings = Settings(_env_file=None)
+        settings.ensure_directories()
+        return settings
+
+    # ── Development mode: .env file fallback ──────────────────────────────
     env_path = PROJECT_ROOT / ".env"
     if env_path.exists():
         load_dotenv(env_path)
     else:
-        # Try .env.example for development
         env_example = PROJECT_ROOT / ".env.example"
         if env_example.exists():
             load_dotenv(env_example, override=False)

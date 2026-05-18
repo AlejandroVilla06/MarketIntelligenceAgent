@@ -1,0 +1,89 @@
+# ==============================================================================
+# docker-compose.yml — Market Intelligence Agent
+# ==============================================================================
+#
+# Orchestrates the backend API server with persistent volumes for ChromaDB
+# vector data, logs, and processed datasets.
+#
+# Usage:
+#   docker compose up -d                          # start
+#   docker compose logs -f                        # tail logs
+#   docker compose down                           # stop (keeps volumes)
+#   docker compose down -v                        # stop + delete volumes
+#
+# Environment variables are loaded from the host's environment. For
+# production, set them in the orchestration layer (systemd, CI/CD, etc.).
+# A .env file in this directory is also automatically picked up by
+# docker compose for local development.
+# ==============================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: market-intelligence-agent:latest
+    container_name: mia-api
+    restart: unless-stopped
+
+    # ── Port mapping ────────────────────────────────────────────────────────
+    ports:
+      - "8000:8000"
+
+    # ── Environment ─────────────────────────────────────────────────────────
+    # APP_ENV=production tells get_settings() to skip .env file loading and
+    # read credentials EXCLUSIVELY from system environment variables.
+    # Override any setting via environment variable (pydantic-settings maps
+    # field names to UPPERCASE env vars automatically).
+    environment:
+      - APP_ENV=production
+      # ── Required (set these in your orchestration layer) ──────────────────
+      # - SUPABASE_URL=
+      # - SUPABASE_KEY=
+      # - SUPABASE_JWT_SECRET=
+      # - OPENAI_API_KEY=
+      # - OPENAI_API_BASE=https://openrouter.ai/api/v1
+      # - COINMARKETCAP_API_KEY=
+      # - FRED_API_KEY=
+      #
+      # ── Optional overrides ────────────────────────────────────────────────
+      # - LOG_LEVEL=INFO
+      # - CORS_ORIGINS=http://localhost:3000,https://your-frontend.com
+      # - TRACKED_SYMBOLS=AAPL,GOOGL,NVDA
+      # - API_WORKERS=2
+
+    # ── Volumes ─────────────────────────────────────────────────────────────
+    # ChromaDB data persists across restarts. Logs survive container recycle.
+    volumes:
+      - chromadb_data:/app/data/processed/chromadb
+      - logs_data:/app/logs
+      - raw_data:/app/data/raw
+
+    # ── Health — Docker checks the container HEALTHCHECK we defined ─────────
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+    # ── Resource limits (tune for your environment) ─────────────────────────
+    # ChromaDB + torch can be memory-intensive at startup.
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+# ── Persistent volumes ──────────────────────────────────────────────────────
+volumes:
+  chromadb_data:
+    driver: local
+    name: mia-chromadb-data
+  logs_data:
+    driver: local
+    name: mia-logs-data
+  raw_data:
+    driver: local
+    name: mia-raw-data
