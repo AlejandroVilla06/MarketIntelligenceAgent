@@ -3,16 +3,28 @@
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TranslationProvider } from "@/components/TranslationProvider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
 	const [theme, setTheme] = useState<string | null>(null);
 
 	useEffect(() => {
+		// ── Migrate old "system" theme → "medium" ──
+		// next-themes v0.4 guarda el tema en localStorage con key "theme"
+		try {
+			const saved = localStorage.getItem("theme");
+			if (saved === "system" || saved === "light" || saved === "dark") {
+				// "system" ya no existe, migramos a "medium"
+				// "light" y "dark" se mantienen igual
+				localStorage.setItem("theme", saved === "system" ? "medium" : saved);
+			}
+		} catch { /* localStorage no disponible */ }
+
 		let cancelled = false;
 		const controller = new AbortController();
 		const timeout = setTimeout(() => {
-			if (!cancelled) setTheme("dark");
-		}, 3000);
+			if (!cancelled) setTheme("medium");
+		}, 800);
 
 		async function loadTheme() {
 			try {
@@ -29,13 +41,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 					});
 					if (resp.ok) {
 						const profile = await resp.json();
-						if (!cancelled) setTheme(profile.preferred_theme || "dark");
+						if (!cancelled) setTheme(profile.preferred_theme || "medium");
 						clearTimeout(timeout);
 						return;
 					}
 				}
 			} catch {}
-			if (!cancelled) setTheme("dark");
+			if (!cancelled) setTheme("medium");
 			clearTimeout(timeout);
 		}
 
@@ -62,8 +74,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 	}
 
 	return (
-		<ThemeProvider attribute="class" defaultTheme={theme} enableSystem={false}>
-			{children}
+		<ThemeProvider attribute="data-theme" defaultTheme={theme} enableSystem={false}>
+			<TranslationProvider>
+				{children}
+			</TranslationProvider>
 		</ThemeProvider>
 	);
 }

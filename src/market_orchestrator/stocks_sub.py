@@ -1,7 +1,6 @@
 """StocksSubOrchestrator — wraps the existing MarketQueryAgent pipeline."""
 from __future__ import annotations
 from src.market_orchestrator.sub_orchestrator import BaseSubOrchestrator
-from src.agents.query_agent import MarketQueryAgent
 from src.utils import get_logger
 
 log = get_logger("agents.stocks_sub")
@@ -27,18 +26,23 @@ class StocksSubOrchestrator(BaseSubOrchestrator):
     """
     
     def __init__(self) -> None:
-        self._agent: MarketQueryAgent | None = None
+        self._agent: object | None = None
     
     @property
     def domain(self) -> str:
         return "stocks"
     
-    def _get_agent(self) -> MarketQueryAgent:
+    def _get_agent(self) -> object | None:
         if self._agent is None:
-            from src.agents.retriever import MarketRAGRetriever
-            retriever = MarketRAGRetriever()
-            self._agent = MarketQueryAgent(retriever=retriever)
-        return self._agent
+            try:
+                from src.agents.query_agent import MarketQueryAgent
+                from src.agents.retriever import MarketRAGRetriever
+                retriever = MarketRAGRetriever()
+                self._agent = MarketQueryAgent(retriever=retriever)
+            except Exception as e:
+                log.warning("Stocks agent not available: {}", e)
+                self._agent = False  # Sentinel — don't retry
+        return self._agent if self._agent is not False else None
     
     def can_handle(self, query: str) -> tuple[bool, float]:
         q = query.lower().strip()
@@ -54,4 +58,6 @@ class StocksSubOrchestrator(BaseSubOrchestrator):
     
     def answer(self, query: str) -> str:
         agent = self._get_agent()
+        if agent is None:
+            return "⚠️ El mercado de acciones no está disponible en este momento (dependencias del pipeline RAG no instaladas). Probá con crypto o macroeconomía."
         return agent.run(query)

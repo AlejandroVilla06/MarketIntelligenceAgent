@@ -84,10 +84,17 @@ class MarketOrchestrator:
 
         self._storage = storage or StorageInterface()
         self.storage = self._storage
-        self._retriever = MarketRAGRetriever(
-            persist_directory=self.persist_directory
-        )
-        self.retriever = self._retriever
+        # MarketRAGRetriever requiere sentence_transformers (torch ~800MB)
+        # Si no está instalado, el orquestador igual funciona para crypto, macro y cálculo
+        try:
+            self._retriever = MarketRAGRetriever(
+                persist_directory=self.persist_directory
+            )
+            self.retriever = self._retriever
+        except Exception as e:
+            log.warning("MarketRAGRetriever no disponible (stocks RAG desactivado): {}", e)
+            self._retriever = None
+            self.retriever = None
 
         # Register sub-orchestrators
         self._stocks_sub = StocksSubOrchestrator()
@@ -210,8 +217,11 @@ class MarketOrchestrator:
             "agent_initialized": self.agent is not None,
         }
 
-        if self.retriever and self._is_setup:
-            status["counts"] = self.retriever.get_counts()
+        if self.retriever is not None and self._is_setup:
+            try:
+                status["counts"] = self.retriever.get_counts()
+            except Exception:
+                status["counts"] = {}
 
         return status
 

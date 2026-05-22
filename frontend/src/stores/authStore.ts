@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import type { User } from "@supabase/supabase-js"
 import { api } from "@/lib/api"
 
@@ -19,23 +20,34 @@ interface AuthState {
   syncProfile: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  loading: true,
-  profile: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      loading: true,
+      profile: null,
 
-  setUser: (user) => set({ user, loading: false }),
+      setUser: (user) => set({ user, loading: false }),
 
-  setLoading: (loading) => set({ loading }),
+      setLoading: (loading) => set({ loading }),
 
-  setProfile: (profile) => set({ profile }),
+      setProfile: (profile) => set({ profile }),
 
-  syncProfile: async () => {
-    try {
-      const profile = await api.profile.get()
-      set({ profile })
-    } catch {
-      // Silently fail — Settings page handles its own error states
-    }
-  },
-}))
+      syncProfile: async () => {
+        try {
+          const profile = await api.profile.get()
+          set({ profile })
+        } catch {
+          // Silently fail — Settings page handles its own error states
+        }
+      },
+    }),
+    {
+      name: "auth-storage",
+      partialize: (state) => ({
+        profile: state.profile,
+        user: state.user,
+      }),
+    },
+  ),
+)

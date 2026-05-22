@@ -2,24 +2,39 @@
 
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { Sun, Moon } from "lucide-react"
+import { Sun, Moon, Contrast } from "lucide-react"
 import { api } from "@/lib/api"
+import { useEffect, useState } from "react"
+import { useTranslation } from "@/components/TranslationProvider"
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const { t } = useTranslation()
+  useEffect(() => setMounted(true), [])
 
   function handleToggle() {
-    const newTheme = theme === "dark" ? "light" : "dark"
+    const next = { dark: "light", light: "medium", medium: "dark" } as const
+    const newTheme = next[theme as keyof typeof next] ?? "medium"
     setTheme(newTheme)
-    // Sync to Supabase (fire and forget)
     api.profile.update({ preferred_theme: newTheme }).catch(() => {})
+  }
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" disabled>
+        <Sun className="h-4 w-4" />
+        <span className="sr-only">{t("theme.toggle")}</span>
+      </Button>
+    )
   }
 
   return (
     <Button variant="ghost" size="icon" onClick={handleToggle}>
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      <span className="sr-only">Toggle theme</span>
+      {theme === "dark" && <Moon className="h-4 w-4" />}
+      {theme === "light" && <Sun className="h-4 w-4" />}
+      {theme === "medium" && <Contrast className="h-4 w-4" />}
+      <span className="sr-only">{t("theme.toggle")}</span>
     </Button>
   )
 }

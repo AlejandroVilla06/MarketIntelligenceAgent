@@ -129,6 +129,18 @@ export default function ChatPage() {
 		[currentConversation?.id, setCurrentConversation, loadConversations],
 	);
 
+	async function handleRename(id: string, title: string) {
+		// Update UI inmediatamente (optimistic update)
+		useChatStore.getState().renameConversation(id, title);
+		// Después intentá guardar en backend (fire & forget)
+		try {
+			await api.conversations.rename(id, title);
+		} catch {
+			// Si falla, revertí recargando la lista
+			loadConversations();
+		}
+	}
+
 	const handleSend = useCallback(
 		async (query: string) => {
 			if (!query.trim() || isStreaming) return;
@@ -141,15 +153,25 @@ export default function ChatPage() {
 				query,
 				currentConversation?.id,
 				(token) => appendStreamToken(token),
-				(convId) => {
+				async (convId) => {
 					const fullContent = useChatStore.getState().streamingContent;
 					addMessage({ role: "assistant", content: fullContent });
 					resetStreaming();
-					// Update current conversation ID if this was a new conversation
+					// Fetch fresh conversation data to get the auto-title from backend
 					if (convId && !currentConversation?.id) {
-						setCurrentConversation({ id: convId, title: "Nueva conversación", messages: [] });
+						try {
+							const fresh = await api.conversations.get(convId);
+							setCurrentConversation(fresh);
+						} catch {
+							// Fallback: use the query text as local title
+							setCurrentConversation({
+								id: convId,
+								title: query.substring(0, 100),
+								messages: useChatStore.getState().messages,
+							});
+						}
 					}
-					loadConversations();
+					await loadConversations();
 				},
 				(error) => {
 					addMessage({ role: "assistant", content: `Error: ${error}` });
@@ -178,6 +200,7 @@ export default function ChatPage() {
 					activeId={currentConversation?.id}
 					onSelect={handleSelectConversation}
 					onDelete={handleDeleteConversation}
+					onRename={handleRename}
 					onNew={handleNewChat}
 					userEmail={user?.email || undefined}
 					isLoading={isLoadingHistory && initialLoading}
@@ -197,6 +220,7 @@ export default function ChatPage() {
 							setLeftOpen(false);
 						}}
 						onDelete={handleDeleteConversation}
+						onRename={handleRename}
 						onNew={handleNewChat}
 						userEmail={user?.email || undefined}
 						isLoading={isLoadingHistory && initialLoading}

@@ -422,8 +422,16 @@ class MarketQueryAgent:
         chroma_data = self._retrieve_raw_data(query)
         log.info(f"[Stage 1] Retrieved data: {type(chroma_data).__name__}")
 
-        # Handle empty data
+        # Handle empty data — fallback al LLM con conocimiento propio
         if self._is_empty(chroma_data):
+            if self._llm is not None:
+                log.info("[Stage 1] ChromaDB vacía, usando LLM directamente...")
+                result = self._generate_analysis(query, "", language)
+                result = self._strip_react_artifacts(result)
+                result = self._strip_data_sections(result)
+                self.memory.add_ai_message(result)
+                self._store_cache(query, result, language)
+                return result
             msg = _localize(_NO_RESULTS_MESSAGES, language)
             self.memory.add_ai_message(msg)
             return msg

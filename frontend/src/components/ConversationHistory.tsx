@@ -13,6 +13,7 @@ interface ConversationHistoryProps {
   activeId?: string
   onSelect: (id: string) => void
   onDelete: (id: string) => void
+  onRename: (id: string, title: string) => void
   onNew: () => void
   userEmail?: string
   onLogout?: () => void
@@ -75,7 +76,7 @@ function EmptyState() {
 }
 
 export function ConversationHistory({
-  conversations, activeId, onSelect, onDelete, onNew,
+  conversations, activeId, onSelect, onDelete, onRename, onNew,
   userEmail, onLogout, isLoading, hasMore, onLoadMore,
 }: ConversationHistoryProps) {
   const [search, setSearch] = useState("")
@@ -141,6 +142,7 @@ export function ConversationHistory({
                     isActive={conv.id === activeId}
                     onSelect={onSelect}
                     onDelete={onDelete}
+                    onRename={onRename}
                   />
                 ))}
               </div>

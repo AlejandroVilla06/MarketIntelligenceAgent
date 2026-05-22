@@ -1,23 +1,27 @@
 """MCP Server: FRED macroeconomic data."""
 from __future__ import annotations
-import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("macro-economics")
 FRED_API_BASE = "https://api.stlouisfed.org/fred/series/observations"
-FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
 
 def _fetch_series(series_id: str, name: str, limit: int = 3) -> str:
     """Fetch a FRED time series and return formatted string."""
+    from src.config import settings
+
+    fred_key = settings.fred_api_key
+    if not fred_key:
+        return f"⚠️ FRED API key no configurada. Configurala en el .env para acceder a datos de {name}."
+
     try:
         with httpx.Client() as client:
             resp = client.get(
                 FRED_API_BASE,
                 params={
                     "series_id": series_id,
-                    "api_key": FRED_API_KEY,
+                    "api_key": fred_key,
                     "file_type": "json",
                     "sort_order": "desc",
                     "limit": limit,

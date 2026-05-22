@@ -20,36 +20,37 @@ function RawDataFallback({ data }: { data: unknown }) {
 }
 
 export function WidgetRenderer({ widget }: WidgetRendererProps) {
+	const data = widget.data as any;
 	switch (widget.type) {
 		case "crypto":
-			return <CryptoPriceCard data={widget.data} />;
+			return <CryptoPriceCard data={data} />;
 		case "macro":
-			return <MacroIndicator data={widget.data} />;
+			return <MacroIndicator data={data} />;
 		case "table":
-			return <DataTable data={widget.data} />;
+			return <DataTable data={data} />;
 		case "calc":
-			return <CalcResult data={widget.data} />;
+			return <CalcResult data={data} />;
 		case "chart":
 			return (
 				<TimeSeriesChart
-					data={widget.data.data || []}
-					xKey={widget.data.xKey || "date"}
-					yKey={widget.data.yKey || "value"}
-					title={widget.data.title}
-					type={widget.data.type || "line"}
-					color={widget.data.color}
+					data={data.data || []}
+					xKey={data.xKey || "date"}
+					yKey={data.yKey || "value"}
+					title={data.title}
+					type={data.type || "line"}
+					color={data.color}
 				/>
 			);
 		case "text":
 			return (
 				<div className="text-sm text-muted-foreground">
-					{widget.data.text ||
-						widget.data.content ||
-						JSON.stringify(widget.data)}
+					{data.text ||
+						data.content ||
+						JSON.stringify(data)}
 				</div>
 			);
 		default:
 			// Unknown widget type — render raw data as JSON so nothing is lost
-			return <RawDataFallback data={widget.data} />;
+			return <RawDataFallback data={data} />;
 	}
 }

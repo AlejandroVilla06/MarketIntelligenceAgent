@@ -15,6 +15,7 @@ interface ChatState {
   setStreamingContent: (content: string) => void
   appendStreamToken: (token: string) => void
   resetStreaming: () => void
+  renameConversation: (id: string, title: string) => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -41,4 +42,14 @@ export const useChatStore = create<ChatState>((set) => ({
       streamingContent: state.streamingContent + token,
     })),
   resetStreaming: () => set({ isStreaming: false, streamingContent: "" }),
+  renameConversation: (id: string, title: string) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, title } : c
+      ),
+      currentConversation:
+        state.currentConversation?.id === id
+          ? { ...state.currentConversation, title }
+          : state.currentConversation,
+    })),
 }))
